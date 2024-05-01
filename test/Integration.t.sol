@@ -36,6 +36,19 @@ interface L1RelayLike {
     function l2GovernanceRelay() external view returns (address);
 }
 
+interface L1RouterLike {
+    function setGateways(
+        address[] memory tokens,
+        address[] memory gateways,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 maxSubmissionCost
+    ) external payable returns (uint256);
+    function owner() external view returns (address);
+    function getGateway(address) external view returns (address);
+    function counterpartGateway() external view returns (address);
+}
+
 contract IntegrationTest is DssTest {
 
     Domain l1Domain;
@@ -47,11 +60,13 @@ contract IntegrationTest is DssTest {
     address ESCROW;
     GemMock l1Token;
     L1TokenGateway l1Gateway;
+    address L1_ROUTER = 0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef;
 
     // L2-side
     address L2_GOV_RELAY;
     GemMock l2Token;
     L2TokenGateway l2Gateway;
+    address L2_ROUTER;
 
     function setUp() public {
         string memory config = ScriptTools.readInput("config");
@@ -67,7 +82,10 @@ contract IntegrationTest is DssTest {
         vm.label(address(ESCROW),       "ESCROW");
         vm.label(address(L2_GOV_RELAY), "L2_GOV_RELAY");
 
-        
+        vm.label(L1_ROUTER, "L1_ROUTER");
+        L2_ROUTER = L1RouterLike(L1_ROUTER).counterpartGateway();
+        vm.label(L2_ROUTER, "L2_ROUTER");
+
         l2Domain = new ArbitrumDomain(config, getChain("arbitrum_one"), l1Domain);
 
         address l1Gateway_ = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 2); // foundry increments a global nonce across domains
@@ -76,7 +94,7 @@ contract IntegrationTest is DssTest {
             deployer:  address(this),
             owner:     L2_GOV_RELAY,
             l1Gateway: l1Gateway_, 
-            l2Router:  address(0)
+            l2Router:  L2_ROUTER
         });
         l2Gateway = L2TokenGateway(l2GatewayInstance.gateway);
         assertEq(address(L2TokenGatewaySpell(l2GatewayInstance.spell).l2Gateway()), address(l2Gateway));
@@ -86,7 +104,7 @@ contract IntegrationTest is DssTest {
             deployer:  address(this),
             owner:     PAUSE_PROXY,
             l2Gateway: address(l2Gateway), 
-            l1Router:  address(0),
+            l1Router:  L1_ROUTER,
             inbox:     l2Domain.readConfigAddress("inbox"),
             escrow:    ESCROW
         }));
@@ -116,6 +134,25 @@ contract IntegrationTest is DssTest {
         TokenGatewayInit.initGateways(dss, address(l1Gateway), l2GatewayInstance, cfg);
         vm.stopPrank();
 
+        l2Domain.relayFromHost(false);
+
+        // Register L1 & L2 gateways in L1 & L2 routers
+        address[] memory l1Gateways = new address[](1);
+        l1Gateways[0] = address(address(l1Gateway));
+        address routerOwner = L1RouterLike(L1_ROUTER).owner();
+        uint256 maxSubmissionCost = 0.1 ether;
+        uint256 maxGas = 1_000_000;
+        uint256 gasPriceBid = 1 gwei;
+        uint256 value = maxSubmissionCost + maxGas * gasPriceBid;
+        vm.deal(routerOwner, value);
+        vm.prank(routerOwner); L1RouterLike(L1_ROUTER).setGateways{value: value}({
+            tokens:            l1Tokens,
+            gateways:          l1Gateways,
+            maxGas:            maxGas,
+            gasPriceBid:       gasPriceBid,
+            maxSubmissionCost: maxSubmissionCost
+        });
+        assertEq(L1RouterLike(L1_ROUTER).getGateway(address(l1Token)), address(l1Gateway));
         l2Domain.relayFromHost(false);
     }
 
@@ -149,6 +186,39 @@ contract IntegrationTest is DssTest {
         l2Domain.relayFromHost(true);
 
         assertEq(l2Token.balanceOf(address(0xb0b)), 100 ether);
+    }
+
+    function testDepositViaRouter() public {
+        l1Token.approve(address(l1Gateway), 100 ether);
+        uint256 escrowBefore = l1Token.balanceOf(ESCROW);
+
+        uint256 maxSubmissionCost = 0.1 ether;
+        uint256 maxGas = 1_000_000;
+        uint256 gasPriceBid = 1 gwei;
+        uint256 value = maxSubmissionCost + maxGas * gasPriceBid;
+        L1TokenGateway(L1_ROUTER).outboundTransferCustomRefund{value: value}(
+            address(l1Token),
+            address(0x7ef),
+            address(0xb0b),
+            50 ether,
+            maxGas,
+            gasPriceBid,
+            abi.encode(maxSubmissionCost, "")
+        );
+        L1TokenGateway(L1_ROUTER).outboundTransfer{value: value}(
+            address(l1Token),
+            address(0xb0b),
+            50 ether,
+            maxGas,
+            gasPriceBid,
+            abi.encode(maxSubmissionCost, "")
+        );
+
+        assertEq(l1Token.balanceOf(ESCROW), escrowBefore + 100 ether);
+        l2Domain.relayFromHost(true);
+
+        assertEq(l2Token.balanceOf(address(0xb0b)), 100 ether);
+
     }
 
     function testWithdraw() public {
@@ -185,6 +255,53 @@ contract IntegrationTest is DssTest {
             ""
         );
         l2Gateway.outboundTransfer(
+            address(l1Token),
+            address(0xced),
+            50 ether,
+            ""
+        );
+        vm.stopPrank();
+
+        assertEq(l2Token.balanceOf(address(0xb0b)), 0);
+        l2Domain.relayToHost(true);
+
+        assertEq(l1Token.balanceOf(address(0xced)), 100 ether);
+    }
+
+    function testWithdrawViaRouter() public {
+        l1Token.approve(address(l1Gateway), 100 ether);
+        uint256 escrowBefore = l1Token.balanceOf(ESCROW);
+
+        uint256 maxSubmissionCost = 0.1 ether;
+        uint256 maxGas = 1_000_000;
+        uint256 gasPriceBid = 1 gwei;
+        uint256 value = maxSubmissionCost + maxGas * gasPriceBid;
+        L1TokenGateway(L1_ROUTER).outboundTransferCustomRefund{value: value}(
+            address(l1Token),
+            address(0x7ef),
+            address(0xb0b),
+            100 ether,
+            maxGas,
+            gasPriceBid,
+            abi.encode(maxSubmissionCost, "")
+        );
+
+        assertEq(l1Token.balanceOf(ESCROW), escrowBefore + 100 ether);
+        l2Domain.relayFromHost(true);
+
+        assertEq(l2Token.balanceOf(address(0xb0b)), 100 ether);
+
+        vm.startPrank(address(0xb0b));
+        l2Token.approve(address(l2Gateway), 100 ether);
+        L2TokenGateway(L2_ROUTER).outboundTransfer(
+            address(l1Token),
+            address(0xced),
+            50 ether,
+            0,
+            0,
+            ""
+        );
+        L2TokenGateway(L2_ROUTER).outboundTransfer(
             address(l1Token),
             address(0xced),
             50 ether,
