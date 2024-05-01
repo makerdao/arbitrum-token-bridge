@@ -21,14 +21,19 @@
 pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
+
 import { Domain } from "dss-test/domains/Domain.sol";
 import { ArbitrumDomain } from "dss-test/domains/ArbitrumDomain.sol";
+import { TokenGatewayDeploy } from "deploy/TokenGatewayDeploy.sol";
+import { L2TokenGatewaySpell } from "deploy/L2TokenGatewaySpell.sol";
+import { L2TokenGatewayInstance } from "deploy/L2TokenGatewayInstance.sol";
+import { TokenGatewayInit, GatewaysConfig } from "deploy/TokenGatewayInit.sol";
 import { L1TokenGateway } from "src/l1/L1TokenGateway.sol";
 import { L2TokenGateway } from "src/l2/L2TokenGateway.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
 
-interface EscrowLike {
-    function approve(address token, address spender, uint256 value) external;
+interface L1RelayLike {
+    function l2GovernanceRelay() external view returns (address);
 }
 
 contract IntegrationTest is DssTest {
@@ -44,6 +49,7 @@ contract IntegrationTest is DssTest {
     L1TokenGateway l1Gateway;
 
     // L2-side
+    address L2_GOV_RELAY;
     GemMock l2Token;
     L2TokenGateway l2Gateway;
 
@@ -54,30 +60,63 @@ contract IntegrationTest is DssTest {
         l1Domain.selectFork();
         l1Domain.loadDssFromChainlog();
         dss = l1Domain.dss();
-        PAUSE_PROXY = dss.chainlog.getAddress("MCD_PAUSE_PROXY");
-        ESCROW = dss.chainlog.getAddress("ARBITRUM_ESCROW");
+        PAUSE_PROXY  = dss.chainlog.getAddress("MCD_PAUSE_PROXY");
+        ESCROW       = dss.chainlog.getAddress("ARBITRUM_ESCROW");
+        L2_GOV_RELAY = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY")).l2GovernanceRelay();
+        vm.label(address(PAUSE_PROXY),  "PAUSE_PROXY");
+        vm.label(address(ESCROW),       "ESCROW");
+        vm.label(address(L2_GOV_RELAY), "L2_GOV_RELAY");
+
         
         l2Domain = new ArbitrumDomain(config, getChain("arbitrum_one"), l1Domain);
 
-        address l1Gateway_ = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1); // foundry increments a global nonce across domains
+        address l1Gateway_ = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 2); // foundry increments a global nonce across domains
         l2Domain.selectFork();
-        l2Gateway = new L2TokenGateway(l1Gateway_, address(0));
-        vm.label(address(l2Gateway), "L2Gateway");
+        L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway({
+            deployer:  address(this),
+            owner:     L2_GOV_RELAY,
+            l1Gateway: l1Gateway_, 
+            l2Router:  address(0)
+        });
+        l2Gateway = L2TokenGateway(l2GatewayInstance.gateway);
+        assertEq(address(L2TokenGatewaySpell(l2GatewayInstance.spell).l2Gateway()), address(l2Gateway));
 
         l1Domain.selectFork();
-        l1Gateway = new L1TokenGateway(address(l2Gateway), address(0), l2Domain.readConfigAddress("inbox"), ESCROW);
+        l1Gateway = L1TokenGateway(TokenGatewayDeploy.deployL1Gateway({
+            deployer:  address(this),
+            owner:     PAUSE_PROXY,
+            l2Gateway: address(l2Gateway), 
+            l1Router:  address(0),
+            inbox:     l2Domain.readConfigAddress("inbox"),
+            escrow:    ESCROW
+        }));
         assertEq(address(l1Gateway), l1Gateway_);
 
         l1Token = new GemMock(100 ether);
+        vm.label(address(l1Token), "l1Token");
 
         l2Domain.selectFork();
         l2Token = new GemMock(0);
-        l2Gateway.file("token", address(l1Token), address(l2Token));
+        vm.label(address(l2Token), "l2Token");
+
+        address[] memory l1Tokens = new address[](1);
+        l1Tokens[0] = address(l1Token);
+        address[] memory l2Tokens = new address[](1);
+        l2Tokens[0] = address(l2Token);
+        GatewaysConfig memory cfg = GatewaysConfig({
+            l1Tokens: l1Tokens,
+            l2Tokens: l2Tokens,
+            maxGas: 300_000,
+            gasPriceBid: 1 gwei,
+            maxSubmissionCost: 0.01 ether
+        });
 
         l1Domain.selectFork();
-        l1Gateway.file("token", address(l1Token), address(l2Token));
+        vm.startPrank(PAUSE_PROXY);
+        TokenGatewayInit.initGateways(dss, address(l1Gateway), l2GatewayInstance, cfg);
+        vm.stopPrank();
 
-        vm.prank(PAUSE_PROXY); EscrowLike(ESCROW).approve(address(l1Token), address(l1Gateway), type(uint256).max);
+        l2Domain.relayFromHost(false);
     }
 
     function testDeposit() public {
