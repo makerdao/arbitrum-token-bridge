@@ -36,10 +36,10 @@ contract L1TokenGateway is ITokenGateway, L1ArbitrumMessenger {
 
     // --- immutables ---
 
+    address public immutable counterpartGateway;
+    address public immutable l1Router;
     address public immutable inbox;
     address public immutable escrow;
-    address public immutable l1Router;
-    address public immutable counterpartGateway;
 
     // --- events ---
 

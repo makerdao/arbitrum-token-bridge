@@ -156,7 +156,7 @@ contract IntegrationTest is DssTest {
         l2Domain.relayFromHost(false);
     }
 
-    function testDeposit() public {
+    function _deposit(address target) internal {
         l1Token.approve(address(l1Gateway), 100 ether);
         uint256 escrowBefore = l1Token.balanceOf(ESCROW);
 
@@ -164,7 +164,7 @@ contract IntegrationTest is DssTest {
         uint256 maxGas = 1_000_000;
         uint256 gasPriceBid = 1 gwei;
         uint256 value = maxSubmissionCost + maxGas * gasPriceBid;
-        l1Gateway.outboundTransferCustomRefund{value: value}(
+        L1TokenGateway(target).outboundTransferCustomRefund{value: value}(
             address(l1Token),
             address(0x7ef),
             address(0xb0b),
@@ -173,7 +173,7 @@ contract IntegrationTest is DssTest {
             gasPriceBid,
             abi.encode(maxSubmissionCost, "")
         );
-        l1Gateway.outboundTransfer{value: value}(
+        L1TokenGateway(target).outboundTransfer{value: value}(
             address(l1Token),
             address(0xb0b),
             50 ether,
@@ -186,132 +186,49 @@ contract IntegrationTest is DssTest {
         l2Domain.relayFromHost(true);
 
         assertEq(l2Token.balanceOf(address(0xb0b)), 100 ether);
+    }
+
+    function testDeposit() public {
+        _deposit(address(l1Gateway));
     }
 
     function testDepositViaRouter() public {
-        l1Token.approve(address(l1Gateway), 100 ether);
-        uint256 escrowBefore = l1Token.balanceOf(ESCROW);
+        _deposit(L1_ROUTER);
 
-        uint256 maxSubmissionCost = 0.1 ether;
-        uint256 maxGas = 1_000_000;
-        uint256 gasPriceBid = 1 gwei;
-        uint256 value = maxSubmissionCost + maxGas * gasPriceBid;
-        L1TokenGateway(L1_ROUTER).outboundTransferCustomRefund{value: value}(
+    }
+
+    function _withdraw(address target) internal {
+        _deposit(address(l1Gateway));
+
+        vm.startPrank(address(0xb0b));
+        l2Token.approve(address(l2Gateway), 100 ether);
+        L2TokenGateway(target).outboundTransfer(
             address(l1Token),
-            address(0x7ef),
-            address(0xb0b),
+            address(0xced),
             50 ether,
-            maxGas,
-            gasPriceBid,
-            abi.encode(maxSubmissionCost, "")
+            0,
+            0,
+            ""
         );
-        L1TokenGateway(L1_ROUTER).outboundTransfer{value: value}(
+        L2TokenGateway(target).outboundTransfer(
             address(l1Token),
-            address(0xb0b),
+            address(0xced),
             50 ether,
-            maxGas,
-            gasPriceBid,
-            abi.encode(maxSubmissionCost, "")
+            ""
         );
+        vm.stopPrank();
 
-        assertEq(l1Token.balanceOf(ESCROW), escrowBefore + 100 ether);
-        l2Domain.relayFromHost(true);
+        assertEq(l2Token.balanceOf(address(0xb0b)), 0);
+        l2Domain.relayToHost(true);
 
-        assertEq(l2Token.balanceOf(address(0xb0b)), 100 ether);
-
+        assertEq(l1Token.balanceOf(address(0xced)), 100 ether);
     }
 
     function testWithdraw() public {
-        l1Token.approve(address(l1Gateway), 100 ether);
-        uint256 escrowBefore = l1Token.balanceOf(ESCROW);
-
-        uint256 maxSubmissionCost = 0.1 ether;
-        uint256 maxGas = 1_000_000;
-        uint256 gasPriceBid = 1 gwei;
-        uint256 value = maxSubmissionCost + maxGas * gasPriceBid;
-        l1Gateway.outboundTransferCustomRefund{value: value}(
-            address(l1Token),
-            address(0x7ef),
-            address(0xb0b),
-            100 ether,
-            maxGas,
-            gasPriceBid,
-            abi.encode(maxSubmissionCost, "")
-        );
-
-        assertEq(l1Token.balanceOf(ESCROW), escrowBefore + 100 ether);
-        l2Domain.relayFromHost(true);
-
-        assertEq(l2Token.balanceOf(address(0xb0b)), 100 ether);
-
-        vm.startPrank(address(0xb0b));
-        l2Token.approve(address(l2Gateway), 100 ether);
-        l2Gateway.outboundTransfer(
-            address(l1Token),
-            address(0xced),
-            50 ether,
-            0,
-            0,
-            ""
-        );
-        l2Gateway.outboundTransfer(
-            address(l1Token),
-            address(0xced),
-            50 ether,
-            ""
-        );
-        vm.stopPrank();
-
-        assertEq(l2Token.balanceOf(address(0xb0b)), 0);
-        l2Domain.relayToHost(true);
-
-        assertEq(l1Token.balanceOf(address(0xced)), 100 ether);
+        _withdraw(address(l2Gateway));
     }
 
     function testWithdrawViaRouter() public {
-        l1Token.approve(address(l1Gateway), 100 ether);
-        uint256 escrowBefore = l1Token.balanceOf(ESCROW);
-
-        uint256 maxSubmissionCost = 0.1 ether;
-        uint256 maxGas = 1_000_000;
-        uint256 gasPriceBid = 1 gwei;
-        uint256 value = maxSubmissionCost + maxGas * gasPriceBid;
-        L1TokenGateway(L1_ROUTER).outboundTransferCustomRefund{value: value}(
-            address(l1Token),
-            address(0x7ef),
-            address(0xb0b),
-            100 ether,
-            maxGas,
-            gasPriceBid,
-            abi.encode(maxSubmissionCost, "")
-        );
-
-        assertEq(l1Token.balanceOf(ESCROW), escrowBefore + 100 ether);
-        l2Domain.relayFromHost(true);
-
-        assertEq(l2Token.balanceOf(address(0xb0b)), 100 ether);
-
-        vm.startPrank(address(0xb0b));
-        l2Token.approve(address(l2Gateway), 100 ether);
-        L2TokenGateway(L2_ROUTER).outboundTransfer(
-            address(l1Token),
-            address(0xced),
-            50 ether,
-            0,
-            0,
-            ""
-        );
-        L2TokenGateway(L2_ROUTER).outboundTransfer(
-            address(l1Token),
-            address(0xced),
-            50 ether,
-            ""
-        );
-        vm.stopPrank();
-
-        assertEq(l2Token.balanceOf(address(0xb0b)), 0);
-        l2Domain.relayToHost(true);
-
-        assertEq(l1Token.balanceOf(address(0xced)), 100 ether);
+        _withdraw(L2_ROUTER);
     }
 }
