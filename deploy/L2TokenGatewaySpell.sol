@@ -28,5 +28,5 @@ contract L2TokenGatewaySpell {
     function rely(address usr) external { l2Gateway.rely(usr); }
     function deny(address usr) external { l2Gateway.deny(usr); }
     function close() external { l2Gateway.close(); }
-    function file(bytes32 what, address key, address data) external { l2Gateway.file(what, key, data); }
+    function registerToken(address l1Token, address l2Token) external { l2Gateway.registerToken(l1Token, l2Token); }
 }

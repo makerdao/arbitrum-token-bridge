@@ -21,7 +21,7 @@ import { L2TokenGatewayInstance } from "./L2TokenGatewayInstance.sol";
 import { L2TokenGatewaySpell } from "./L2TokenGatewaySpell.sol";
 
 interface GatewayLike {
-    function file(bytes32, address, address) external;
+    function registerToken(address, address) external;
 }
 
 interface L1RelayLike {
@@ -71,10 +71,10 @@ library TokenGatewayInit {
         for(uint256 i; i < cfg.l1Tokens.length; ++i) {
             escrow.approve(cfg.l1Tokens[i], l1Gateway_, type(uint256).max);
 
-            GatewayLike(l1Gateway_).file("token", cfg.l1Tokens[i], cfg.l2Tokens[i]); // TODO: allow bulk filing of all tokens at once?
+            GatewayLike(l1Gateway_).registerToken(cfg.l1Tokens[i], cfg.l2Tokens[i]); // TODO: allow bulk registration of all tokens at once?
             l1GovRelay.relay({
                 target:            l2GatewayInstance.spell,
-                targetData:        abi.encodeCall(L2TokenGatewaySpell.file, ("token", cfg.l1Tokens[i], cfg.l2Tokens[i])),
+                targetData:        abi.encodeCall(L2TokenGatewaySpell.registerToken, (cfg.l1Tokens[i], cfg.l2Tokens[i])),
                 l1CallValue:       l1CallValue,
                 maxGas:            cfg.maxGas,
                 gasPriceBid:       cfg.gasPriceBid,

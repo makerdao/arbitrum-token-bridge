@@ -231,4 +231,6 @@ contract IntegrationTest is DssTest {
     function testWithdrawViaRouter() public {
         _withdraw(L2_ROUTER);
     }
+
+    // TODO: add integration tests for retry of finalizeXXX after revert
 }

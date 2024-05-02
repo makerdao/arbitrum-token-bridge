@@ -21,6 +21,7 @@
 pragma solidity ^0.8.21;
 
 import { ITokenGateway } from "../arbitrum/ITokenGateway.sol";
+import { ICustomGateway } from "../arbitrum/ICustomGateway.sol";
 import { AddressAliasHelper } from "../arbitrum/AddressAliasHelper.sol";
 import { L2ArbitrumMessenger } from "../arbitrum/L2ArbitrumMessenger.sol";
 
@@ -29,7 +30,7 @@ interface TokenLike {
     function burn(address, uint256) external;
 }
 
-contract L2TokenGateway is ITokenGateway, L2ArbitrumMessenger {
+contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
     // --- storage variables ---
 
     mapping(address => uint256) public wards;
@@ -46,7 +47,6 @@ contract L2TokenGateway is ITokenGateway, L2ArbitrumMessenger {
     event Rely(address indexed usr);
     event Deny(address indexed usr);
     event Closed();
-    event File(bytes32 indexed what, address key, address data);
     event DepositFinalized(
         address indexed l1Token,
         address indexed _from,
@@ -109,10 +109,9 @@ contract L2TokenGateway is ITokenGateway, L2ArbitrumMessenger {
         emit Closed();
     }
 
-    function file(bytes32 what, address key, address data) external auth {
-        if (what == "token") l1ToL2Token[key] = data; // TODO: should we emit TokenSet(address indexed l1Address, address indexed l2Address); ?
-        else revert("L2TokenGateway/file-unrecognized-param");
-        emit File(what, key, data);
+    function registerToken(address l1Token, address l2Token) external auth {
+        l1ToL2Token[l1Token] = l2Token;
+        emit TokenSet(l1Token, l2Token);
     }
 
     // --- ITokenGateway ---
@@ -155,10 +154,10 @@ contract L2TokenGateway is ITokenGateway, L2ArbitrumMessenger {
         require(msg.value == 0, "L2TokenGateway/no-value-allowed");
         require(isOpen == 1, "L2TokenGateway/closed");
         address l2Token = l1ToL2Token[l1Token];
-        require(l2Token != address(0), "L1TokenGateway/invalid-token");
+        require(l2Token != address(0), "L2TokenGateway/invalid-token");
 
         (address from, bytes memory extraData) = parseOutboundData(data);
-        require(extraData.length == 0, "L2TokenGateway/extra-data-disabled");
+        require(extraData.length == 0, "L2TokenGateway/extra-data-not-allowed");
 
         TokenLike(l2Token).burn(from, amount);
 
@@ -224,7 +223,7 @@ contract L2TokenGateway is ITokenGateway, L2ArbitrumMessenger {
         bytes calldata /* data */
     ) external payable onlyCounterpartGateway {
         address l2Token = l1ToL2Token[l1Token];
-        require(l2Token != address(0), "L2TokenGateway/invalid-token"); // TODO: check that retryable ticket can be retried -- note that L2ArbitrumGateway triggers withdrawal instead
+        require(l2Token != address(0), "L2TokenGateway/invalid-token"); // TODO: we can retry if this reverts but note that L2ArbitrumGateway triggers withdrawal instead of reverting
 
         TokenLike(l2Token).mint(to, amount);
 

@@ -21,13 +21,14 @@
 pragma solidity ^0.8.21;
 
 import { ITokenGateway } from "../arbitrum/ITokenGateway.sol";
+import { ICustomGateway } from "../arbitrum/ICustomGateway.sol";
 import { L1ArbitrumMessenger } from "../arbitrum/L1ArbitrumMessenger.sol";
 
 interface TokenLike {
     function transferFrom(address, address, uint256) external;
 }
 
-contract L1TokenGateway is ITokenGateway, L1ArbitrumMessenger {
+contract L1TokenGateway is ITokenGateway, ICustomGateway, L1ArbitrumMessenger {
     // --- storage variables ---
 
     mapping(address => uint256) public wards;
@@ -46,7 +47,6 @@ contract L1TokenGateway is ITokenGateway, L1ArbitrumMessenger {
     event Rely(address indexed usr);
     event Deny(address indexed usr);
     event Closed();
-    event File(bytes32 indexed what, address key, address data);
     event DepositInitiated(
         address l1Token,
         address indexed _from,
@@ -114,10 +114,9 @@ contract L1TokenGateway is ITokenGateway, L1ArbitrumMessenger {
         emit Closed();
     }
 
-    function file(bytes32 what, address key, address data) external auth {
-        if (what == "token") l1ToL2Token[key] = data; // TODO: send a xchain msg to update the mapping on L2?
-        else revert("L1TokenGateway/file-unrecognized-param");
-        emit File(what, key, data);
+    function registerToken(address l1Token, address l2Token) external auth {
+        l1ToL2Token[l1Token] = l2Token;
+        emit TokenSet(l1Token, l2Token);
     }
 
     // --- ITokenGateway ---
@@ -127,7 +126,7 @@ contract L1TokenGateway is ITokenGateway, L1ArbitrumMessenger {
      * @param l1Token address of L1 token
      * @return l2Token L2 address of a bridged ERC20 token
      */
-    function calculateL2TokenAddress(address l1Token) public view override returns (address l2Token) {
+    function calculateL2TokenAddress(address l1Token) external view override returns (address l2Token) {
         l2Token = l1ToL2Token[l1Token];
     }
 
@@ -140,7 +139,7 @@ contract L1TokenGateway is ITokenGateway, L1ArbitrumMessenger {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata data
-    ) public payable returns (bytes memory res) {
+    ) external payable returns (bytes memory res) {
         res = outboundTransferCustomRefund(l1Token, to, to, amount, maxGas, gasPriceBid, data);
     }
 
@@ -257,8 +256,8 @@ contract L1TokenGateway is ITokenGateway, L1ArbitrumMessenger {
         address to,
         uint256 amount,
         bytes calldata /* data */
-    ) public payable onlyCounterpartGateway {
-        require(l1Token != address(0), "L1TokenGateway/invalid-token"); // TODO: check retry possible if reverts
+    ) external payable onlyCounterpartGateway {
+        require(l1Token != address(0), "L1TokenGateway/invalid-token");
 
         TokenLike(l1Token).transferFrom(escrow, to, amount);
 
