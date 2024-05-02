@@ -22,6 +22,7 @@ import { L2TokenGatewaySpell } from "./L2TokenGatewaySpell.sol";
 
 interface GatewayLike {
     function registerToken(address, address) external;
+    function l1ToL2Token(address) external returns (address);
 }
 
 interface L1RelayLike {
@@ -49,7 +50,7 @@ struct GatewaysConfig {
 }
 
 library TokenGatewayInit {
-    function initGateways(
+    function addTokens(
         DssInstance memory            dss,
         address                       l1Gateway_,
         L2TokenGatewayInstance memory l2GatewayInstance,
@@ -57,6 +58,7 @@ library TokenGatewayInit {
     ) internal {
         require(cfg.l1Tokens.length == cfg.l2Tokens.length, "TokenGatewayInit/token-arrays-mismatch");
 
+        GatewayLike l1Gateway = GatewayLike(l1Gateway_);
         L1RelayLike l1GovRelay = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY"));
         EscrowLike escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
 
@@ -69,18 +71,31 @@ library TokenGatewayInit {
 
 
         for(uint256 i; i < cfg.l1Tokens.length; ++i) {
-            escrow.approve(cfg.l1Tokens[i], l1Gateway_, type(uint256).max);
+            (address l1Token, address l2Token) = (cfg.l1Tokens[i], cfg.l2Tokens[i]);
+            require(l1Token != address(0), "TokenGatewayInit/invalid-l1-token");
+            require(l2Token != address(0), "TokenGatewayInit/invalid-l2-token");
+            require(l1Gateway.l1ToL2Token(l1Token) == address(0), "TokenGatewayInit/existing-l1-token");
 
-            GatewayLike(l1Gateway_).registerToken(cfg.l1Tokens[i], cfg.l2Tokens[i]); // TODO: allow bulk registration of all tokens at once?
+            escrow.approve(l1Token, l1Gateway_, type(uint256).max);
+            l1Gateway.registerToken(l1Token, l2Token); // TODO: allow bulk registration of all tokens at once?
             l1GovRelay.relay({
                 target:            l2GatewayInstance.spell,
-                targetData:        abi.encodeCall(L2TokenGatewaySpell.registerToken, (cfg.l1Tokens[i], cfg.l2Tokens[i])),
+                targetData:        abi.encodeCall(L2TokenGatewaySpell.registerToken, (l1Token, l2Token)),
                 l1CallValue:       l1CallValue,
                 maxGas:            cfg.maxGas,
                 gasPriceBid:       cfg.gasPriceBid,
                 maxSubmissionCost: cfg.maxSubmissionCost
             });
         }
+    }
+
+    function initGateways(
+        DssInstance memory            dss,
+        address                       l1Gateway_,
+        L2TokenGatewayInstance memory l2GatewayInstance,
+        GatewaysConfig memory         cfg
+    ) internal {
+        addTokens(dss, l1Gateway_, l2GatewayInstance, cfg);
 
         // TODO add l1Gateway to chainlog
     }
