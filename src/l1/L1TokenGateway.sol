@@ -21,14 +21,16 @@
 pragma solidity ^0.8.21;
 
 import { ITokenGateway } from "../arbitrum/ITokenGateway.sol";
+import { IL1ArbitrumGateway } from "../arbitrum/IL1ArbitrumGateway.sol";
 import { ICustomGateway } from "../arbitrum/ICustomGateway.sol";
+import { IERC165, ERC165 } from "../arbitrum/ERC165.sol";
 import { L1ArbitrumMessenger } from "../arbitrum/L1ArbitrumMessenger.sol";
 
 interface TokenLike {
     function transferFrom(address, address, uint256) external;
 }
 
-contract L1TokenGateway is ITokenGateway, ICustomGateway, L1ArbitrumMessenger {
+contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ERC165, L1ArbitrumMessenger {
     // --- storage variables ---
 
     mapping(address => uint256) public wards;
@@ -128,6 +130,21 @@ contract L1TokenGateway is ITokenGateway, ICustomGateway, L1ArbitrumMessenger {
      */
     function calculateL2TokenAddress(address l1Token) external view override returns (address l2Token) {
         l2Token = l1ToL2Token[l1Token];
+    }
+
+    // --- IL1ArbitrumGateway ---
+
+    // TODO: add unit test for supportsInterface
+    
+    /**
+     * @notice See https://github.com/OffchainLabs/token-bridge-contracts/blob/c9e133600afb4e99ee5370c97a14cc5c666dd62c/contracts/tokenbridge/ethereum/gateway/L1ArbitrumGateway.sol#L331
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        // registering interfaces that is added after arb-bridge-peripherals >1.0.11
+        // using function selector instead of single function interfaces to reduce bloat
+        return
+            interfaceId == this.outboundTransferCustomRefund.selector ||
+            super.supportsInterface(interfaceId);
     }
 
     // --- outbound transfers ---
