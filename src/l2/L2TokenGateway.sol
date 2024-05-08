@@ -61,7 +61,6 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         uint256 _exitNum,
         uint256 _amount
     );
-    // event TokenSet(address indexed l1Address, address indexed l2Address);
 
     // --- modifiers ---
 
@@ -71,7 +70,6 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
     }
 
     modifier onlyCounterpartGateway() {
-        // revert("COUCOU");
         require(
             msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway),
             "L2TokenGateway/only-counterpart-gateway"
