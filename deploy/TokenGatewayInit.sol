@@ -97,6 +97,6 @@ library TokenGatewayInit {
     ) internal {
         addTokens(dss, l1Gateway_, l2GatewayInstance, cfg);
 
-        // TODO add l1Gateway to chainlog
+        dss.chainlog.setAddress("ARBITRUM_TOKEN_BRIDGE", l1Gateway_);
     }
 }

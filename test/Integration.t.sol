@@ -134,9 +134,18 @@ contract IntegrationTest is DssTest {
         TokenGatewayInit.initGateways(dss, address(l1Gateway), l2GatewayInstance, cfg);
         vm.stopPrank();
 
-        l2Domain.relayFromHost(false);
+        // test L1 side of initGateways
+        assertEq(l1Token.allowance(ESCROW, l1Gateway_), type(uint256).max);
+        assertEq(l1Gateway.l1ToL2Token(address(l1Token)), address(l2Token));
+        assertEq(dss.chainlog.getAddress("ARBITRUM_TOKEN_BRIDGE"), address(l1Gateway));
+
+        l2Domain.relayFromHost(true);
+
+        // test L2 side of initGateways
+        assertEq(l2Gateway.l1ToL2Token(address(l1Token)), address(l2Token));
 
         // Register L1 & L2 gateways in L1 & L2 routers
+        l1Domain.selectFork();
         address[] memory l1Gateways = new address[](1);
         l1Gateways[0] = address(address(l1Gateway));
         address routerOwner = L1RouterLike(L1_ROUTER).owner();
