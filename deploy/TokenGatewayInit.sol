@@ -45,7 +45,6 @@ interface EscrowLike {
     function approve(address, address, uint256) external;
 }
 
-// TODO: add immutable checks
 struct GatewaysConfig {
     address counterpartGateway;
     address[] l1Tokens;
