@@ -21,7 +21,7 @@ import { L2TokenGatewayInstance } from "./L2TokenGatewayInstance.sol";
 import { L2TokenGatewaySpell } from "./L2TokenGatewaySpell.sol";
 
 interface GatewayLike {
-    function registerToken(address, address) external;
+    function registerTokens(address[] calldata, address[] calldata) external;
     function l1ToL2Token(address) external returns (address);
 }
 
@@ -63,11 +63,10 @@ library TokenGatewayInit {
         EscrowLike escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
 
         uint256 l1CallValue = cfg.maxSubmissionCost + cfg.maxGas * cfg.gasPriceBid;
-        uint256 totCost = cfg.l1Tokens.length * l1CallValue;
 
         // not strictly necessary (as the retryable ticket creation would otherwise fail) 
         // but makes the eth balance requirement more explicit
-        require(address(l1GovRelay).balance >= totCost, "TokenGatewayInit/insufficient-relay-balance");
+        require(address(l1GovRelay).balance >= l1CallValue, "TokenGatewayInit/insufficient-relay-balance");
 
 
         for(uint256 i; i < cfg.l1Tokens.length; ++i) {
@@ -77,16 +76,17 @@ library TokenGatewayInit {
             require(l1Gateway.l1ToL2Token(l1Token) == address(0), "TokenGatewayInit/existing-l1-token");
 
             escrow.approve(l1Token, l1Gateway_, type(uint256).max);
-            l1Gateway.registerToken(l1Token, l2Token); // TODO: allow bulk registration of all tokens at once?
-            l1GovRelay.relay({
-                target:            l2GatewayInstance.spell,
-                targetData:        abi.encodeCall(L2TokenGatewaySpell.registerToken, (l1Token, l2Token)),
-                l1CallValue:       l1CallValue,
-                maxGas:            cfg.maxGas,
-                gasPriceBid:       cfg.gasPriceBid,
-                maxSubmissionCost: cfg.maxSubmissionCost
-            });
         }
+
+        l1Gateway.registerTokens(cfg.l1Tokens, cfg.l2Tokens);
+        l1GovRelay.relay({
+            target:            l2GatewayInstance.spell,
+            targetData:        abi.encodeCall(L2TokenGatewaySpell.registerTokens, (cfg.l1Tokens, cfg.l2Tokens)),
+            l1CallValue:       l1CallValue,
+            maxGas:            cfg.maxGas,
+            gasPriceBid:       cfg.gasPriceBid,
+            maxSubmissionCost: cfg.maxSubmissionCost
+        });
     }
 
     function initGateways(

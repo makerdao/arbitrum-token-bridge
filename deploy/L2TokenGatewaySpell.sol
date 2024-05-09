@@ -29,4 +29,5 @@ contract L2TokenGatewaySpell {
     function deny(address usr) external { l2Gateway.deny(usr); }
     function close() external { l2Gateway.close(); }
     function registerToken(address l1Token, address l2Token) external { l2Gateway.registerToken(l1Token, l2Token); }
+    function registerTokens(address[] calldata l1Tokens, address[] calldata l2Tokens) external { l2Gateway.registerTokens(l1Tokens, l2Tokens); }
 }
