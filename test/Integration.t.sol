@@ -122,6 +122,7 @@ contract IntegrationTest is DssTest {
         address[] memory l2Tokens = new address[](1);
         l2Tokens[0] = address(l2Token);
         GatewaysConfig memory cfg = GatewaysConfig({
+            counterpartGateway: address(l2Gateway),
             l1Tokens: l1Tokens,
             l2Tokens: l2Tokens,
             maxGas: 300_000,
