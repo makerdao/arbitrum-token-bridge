@@ -142,10 +142,10 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
 
     // --- IL1ArbitrumGateway ---
 
-    // TODO: add unit test for supportsInterface
-    
     /**
-     * @notice See https://github.com/OffchainLabs/token-bridge-contracts/blob/c9e133600afb4e99ee5370c97a14cc5c666dd62c/contracts/tokenbridge/ethereum/gateway/L1ArbitrumGateway.sol#L331
+     * @notice This contract only partially implements ERC165 as only a small subset of the supported interfaceId's are known
+     * by the function below. This function is only used to maintain compatibility with the Arbitrum standard L1 token gateway.
+     * See https://github.com/OffchainLabs/token-bridge-contracts/blob/c9e133600afb4e99ee5370c97a14cc5c666dd62c/contracts/tokenbridge/ethereum/gateway/L1ArbitrumGateway.sol#L331
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         // registering interfaces that is added after arb-bridge-peripherals >1.0.11

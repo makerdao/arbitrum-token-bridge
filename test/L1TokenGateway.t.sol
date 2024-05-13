@@ -87,6 +87,13 @@ contract L1TokenGatewayTest is DssTest {
         ]);
     }
 
+    function testErc165() public view {
+        assertEq(gateway.supportsInterface(gateway.supportsInterface.selector), true);
+        assertEq(gateway.supportsInterface(gateway.outboundTransferCustomRefund.selector), true);
+        assertEq(gateway.supportsInterface(0xffffffff), false);
+        assertEq(gateway.supportsInterface(0xbadbadba), false);
+    }
+
     function testTokenRegistration() public {
         assertEq(gateway.l1ToL2Token(address(11)), address(0));
         assertEq(gateway.calculateL2TokenAddress(address(11)), address(0));
