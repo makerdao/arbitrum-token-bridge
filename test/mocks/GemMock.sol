@@ -21,14 +21,25 @@
 pragma solidity ^0.8.21;
 
 contract GemMock {
+    mapping (address => uint256)                      public wards;
     mapping (address => uint256)                      public balanceOf;
     mapping (address => mapping (address => uint256)) public allowance;
 
     uint256 public totalSupply;
 
     constructor(uint256 initialSupply) {
+        wards[msg.sender] = 1;
+
         mint(msg.sender, initialSupply);
     }
+
+    modifier auth() {
+        require(wards[msg.sender] == 1, "Gem/not-authorized");
+        _;
+    }
+
+    function rely(address usr) external auth { wards[usr] = 1; }
+    function deny(address usr) external auth { wards[usr] = 0; }
 
     function approve(address spender, uint256 value) external returns (bool) {
         allowance[msg.sender][spender] = value;
@@ -68,7 +79,7 @@ contract GemMock {
         return true;
     }
 
-    function mint(address to, uint256 value) public {
+    function mint(address to, uint256 value) public auth {
         unchecked {
             balanceOf[to] = balanceOf[to] + value;
         }

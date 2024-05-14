@@ -27,7 +27,7 @@ import { ArbitrumDomain } from "dss-test/domains/ArbitrumDomain.sol";
 import { TokenGatewayDeploy } from "deploy/TokenGatewayDeploy.sol";
 import { L2TokenGatewaySpell } from "deploy/L2TokenGatewaySpell.sol";
 import { L2TokenGatewayInstance } from "deploy/L2TokenGatewayInstance.sol";
-import { TokenGatewayInit, GatewaysConfig } from "deploy/TokenGatewayInit.sol";
+import { TokenGatewayInit, GatewaysConfig, MessageParams } from "deploy/TokenGatewayInit.sol";
 import { L1TokenGateway } from "src/l1/L1TokenGateway.sol";
 import { L2TokenGateway } from "src/l2/L2TokenGateway.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
@@ -115,19 +115,25 @@ contract IntegrationTest is DssTest {
 
         l2Domain.selectFork();
         l2Token = new GemMock(0);
+        l2Token.rely(L2_GOV_RELAY);
+        l2Token.deny(address(this));
         vm.label(address(l2Token), "l2Token");
 
         address[] memory l1Tokens = new address[](1);
         l1Tokens[0] = address(l1Token);
         address[] memory l2Tokens = new address[](1);
         l2Tokens[0] = address(l2Token);
+        MessageParams memory msgParams = MessageParams({
+            maxGas: 300_000,
+            maxSubmissionCost: 0.01 ether
+        });
         GatewaysConfig memory cfg = GatewaysConfig({
             counterpartGateway: address(l2Gateway),
             l1Tokens: l1Tokens,
             l2Tokens: l2Tokens,
-            maxGas: 300_000,
             gasPriceBid: 1 gwei,
-            maxSubmissionCost: 0.01 ether
+            registerTknMsg: msgParams,
+            relyGatewayMsg: msgParams
         });
 
         l1Domain.selectFork();

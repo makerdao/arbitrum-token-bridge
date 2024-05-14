@@ -45,13 +45,18 @@ interface EscrowLike {
     function approve(address, address, uint256) external;
 }
 
+struct MessageParams {
+    uint256 maxGas;
+    uint256 maxSubmissionCost;
+}
+
 struct GatewaysConfig {
     address counterpartGateway;
     address[] l1Tokens;
     address[] l2Tokens;
-    uint256 maxGas;
     uint256 gasPriceBid;
-    uint256 maxSubmissionCost;
+    MessageParams registerTknMsg;
+    MessageParams relyGatewayMsg;
 }
 
 library TokenGatewayInit {
@@ -67,12 +72,12 @@ library TokenGatewayInit {
         L1RelayLike l1GovRelay = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY"));
         EscrowLike escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
 
-        uint256 l1CallValue = cfg.maxSubmissionCost + cfg.maxGas * cfg.gasPriceBid;
+        uint256 registerTknL1Callvalue = cfg.registerTknMsg.maxSubmissionCost + cfg.registerTknMsg.maxGas * cfg.gasPriceBid;
+        uint256 relyGatewayL1Callvalue = cfg.relyGatewayMsg.maxSubmissionCost + cfg.relyGatewayMsg.maxGas * cfg.gasPriceBid;
 
         // not strictly necessary (as the retryable ticket creation would otherwise fail) 
         // but makes the eth balance requirement more explicit
-        require(address(l1GovRelay).balance >= l1CallValue, "TokenGatewayInit/insufficient-relay-balance");
-
+        require(address(l1GovRelay).balance >= registerTknL1Callvalue + relyGatewayL1Callvalue, "TokenGatewayInit/insufficient-relay-balance");
 
         for(uint256 i; i < cfg.l1Tokens.length; ++i) {
             (address l1Token, address l2Token) = (cfg.l1Tokens[i], cfg.l2Tokens[i]);
@@ -87,10 +92,19 @@ library TokenGatewayInit {
         l1GovRelay.relay({
             target:            l2GatewayInstance.spell,
             targetData:        abi.encodeCall(L2TokenGatewaySpell.registerTokens, (cfg.l1Tokens, cfg.l2Tokens)),
-            l1CallValue:       l1CallValue,
-            maxGas:            cfg.maxGas,
+            l1CallValue:       registerTknL1Callvalue,
+            maxGas:            cfg.registerTknMsg.maxGas,
             gasPriceBid:       cfg.gasPriceBid,
-            maxSubmissionCost: cfg.maxSubmissionCost
+            maxSubmissionCost: cfg.registerTknMsg.maxSubmissionCost
+        });
+
+        l1GovRelay.relay({
+            target:            l2GatewayInstance.spell,
+            targetData:        abi.encodeCall(L2TokenGatewaySpell.relyGateway,cfg.l2Tokens),
+            l1CallValue:       relyGatewayL1Callvalue,
+            maxGas:            cfg.relyGatewayMsg.maxGas,
+            gasPriceBid:       cfg.gasPriceBid,
+            maxSubmissionCost: cfg.relyGatewayMsg.maxSubmissionCost
         });
     }
 

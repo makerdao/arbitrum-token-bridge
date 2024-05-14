@@ -56,6 +56,8 @@ contract L2TokenGatewayTest is DssTest {
     function setUp() public {
         gateway = new L2TokenGateway(counterpartGateway, l2Router);
         l2Token = new GemMock(1_000_000 ether);
+        l2Token.rely(address(gateway));
+        l2Token.deny(address(this));
         gateway.registerToken(l1Token, address(l2Token));
         vm.etch(ARB_SYS_ADDRESS, address(new ArbSysMock()).code);
     }
