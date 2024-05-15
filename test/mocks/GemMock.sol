@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// Ngt.sol -- Ngt token
-
-// Copyright (C) 2017, 2018, 2019 dbrock, rain, mrchico
 // Copyright (C) 2024 Dai Foundation
 //
 // This program is free software: you can redistribute it and/or modify
