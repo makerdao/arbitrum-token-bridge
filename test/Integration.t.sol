@@ -126,6 +126,8 @@ contract IntegrationTest is DssTest {
         });
         GatewaysConfig memory cfg = GatewaysConfig({
             counterpartGateway: address(l2Gateway),
+            l1Router: L1_ROUTER,
+            inbox: l2Domain.readConfigAddress("inbox"),
             l1Tokens: l1Tokens,
             l2Tokens: l2Tokens,
             gasPriceBid: 1 gwei,

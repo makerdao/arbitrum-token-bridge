@@ -52,6 +52,8 @@ struct MessageParams {
 
 struct GatewaysConfig {
     address counterpartGateway;
+    address l1Router;
+    address inbox;
     address[] l1Tokens;
     address[] l2Tokens;
     uint256 gasPriceBid;
@@ -115,13 +117,12 @@ library TokenGatewayInit {
         GatewaysConfig memory         cfg
     ) internal {
         L1TokenGatewayLike l1Gateway    = L1TokenGatewayLike(l1Gateway_);
-        L1TokenGatewayLike l1DaiGateway = L1TokenGatewayLike(dss.chainlog.getAddress("ARBITRUM_DAI_BRIDGE"));
 
         // sanity checks
         require(l1Gateway.isOpen() == 1, "TokenGatewayInit/not-open");
         require(l1Gateway.counterpartGateway() == cfg.counterpartGateway, "TokenGatewayInit/counterpart-gateway-mismatch");
-        require(l1Gateway.l1Router() == l1DaiGateway.l1Router(), "TokenGatewayInit/incorrect-l1-router");
-        require(l1Gateway.inbox() == l1DaiGateway.inbox(), "TokenGatewayInit/incorrect-inbox");
+        require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/incorrect-l1-router");
+        require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/incorrect-inbox");
         require(l1Gateway.escrow() == dss.chainlog.getAddress("ARBITRUM_ESCROW"), "TokenGatewayInit/incorrect-escrow");
 
         addTokens(dss, l1Gateway_, l2GatewayInstance, cfg);
