@@ -20,6 +20,8 @@ pragma solidity ^0.8.21;
 import "forge-std/Script.sol";
 
 import { ScriptTools } from "dss-test/ScriptTools.sol";
+import { Domain } from "dss-test/domains/Domain.sol";
+import { ArbitrumDomain } from "dss-test/domains/ArbitrumDomain.sol";
 import { TokenGatewayDeploy, L2TokenGatewayInstance } from "deploy/TokenGatewayDeploy.sol";
 import { ChainLog } from "deploy/mocks/ChainLog.sol";
 import { L1Escrow } from "deploy/mocks/L1Escrow.sol";
@@ -48,18 +50,18 @@ contract Deploy is Script {
     } 
 
     function run() external {
+        string memory config = ScriptTools.readInput("config");
 
-        uint256 l1 = vm.createFork(vm.envString("ETH_RPC_URL"));
-        uint256 l2 = vm.createFork(vm.envString("ARB_RPC_URL"));
+        Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
+        l1Domain.selectFork();
+        ArbitrumDomain l2Domain  = new ArbitrumDomain(config, getChain(vm.envOr("L2", string("arbitrum_one"))), l1Domain);
 
         (,address deployer, ) = vm.readCallers();
+        address l1Router = l2Domain.readConfigAddress("l1Router");
+        address inbox = l2Domain.readConfigAddress("inbox");
 
-        vm.selectFork(l1);
-       
         ChainLog chainlog;
         address owner;
-        address l1Router;
-        address inbox;
         address escrow;
         address l1GovRelay;
         address l2GovRelay;
@@ -67,30 +69,26 @@ contract Deploy is Script {
         if (LOG.code.length > 0) {
             chainlog = ChainLog(LOG);
             owner = chainlog.getAddress("MCD_PAUSE_PROXY");
-            l1Router = L1DaiGatewayLike(chainlog.getAddress("ARBITRUM_DAI_BRIDGE")).l1Router();
-            inbox = L1RouterLike(l1Router).inbox();
             escrow = chainlog.getAddress("ARBITRUM_ESCROW");
             l1GovRelay = chainlog.getAddress("ARBITRUM_GOV_RELAY");
             tokens.l1Nst = chainlog.getAddress("NST");
             tokens.l1Ngt = chainlog.getAddress("NGT");
 
-            vm.selectFork(l2);
+            l2Domain.selectFork();
             l2GovRelay = L1GovernanceRelay(payable(l1GovRelay)).l2GovernanceRelay();
             // TODO: deploy actual L2 token contracts { l2Nst, l2Ngt }
         } else {
             owner = deployer;
             vm.startBroadcast();
             chainlog = new ChainLog();
-            l1Router = vm.envAddress("L1_ROUTER");
-            inbox = L1RouterLike(l1Router).inbox();
             escrow = address(new L1Escrow());
             chainlog.setAddress("ARBITRUM_ESCROW", escrow);
             vm.stopBroadcast();
 
-            vm.selectFork(l2);
+            l2Domain.selectFork();
             address l2GovRelay_ = vm.computeCreateAddress(deployer, vm.getNonce(deployer));
 
-            vm.selectFork(l1);
+            l1Domain.selectFork();
             vm.startBroadcast();
             l1GovRelay = address(new L1GovernanceRelay(inbox, l2GovRelay_));
             tokens.l1Nst = address(new GemMock(1_000_000_000 ether));
@@ -100,7 +98,7 @@ contract Deploy is Script {
             chainlog.setAddress("NGT", tokens.l1Ngt);
             vm.stopBroadcast();
 
-            vm.selectFork(l2);
+            l2Domain.selectFork();
             vm.startBroadcast();
             l2GovRelay = address(new L2GovernanceRelay(l1GovRelay));
             require(l2GovRelay == l2GovRelay_, "l2GovRelay address mismatch");
@@ -115,10 +113,10 @@ contract Deploy is Script {
 
         // L1 deployment
 
-        vm.selectFork(l2);
+        l2Domain.selectFork();
         address l2Gateway = vm.computeCreateAddress(deployer, vm.getNonce(deployer));
 
-        vm.selectFork(l1);
+        l1Domain.selectFork();
         vm.startBroadcast();
         address l1Gateway = TokenGatewayDeploy.deployL1Gateway(deployer, owner, l2Gateway, l1Router, inbox, escrow);
         vm.stopBroadcast();
@@ -126,7 +124,7 @@ contract Deploy is Script {
 
         // L2 deployment
 
-        vm.selectFork(l2);
+        l2Domain.selectFork();
         vm.startBroadcast();
         L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway(deployer, owner, l1Gateway, l2Router);
         require(l2GatewayInstance.gateway == l2Gateway, "l2Gateway address mismatch");

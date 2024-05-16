@@ -57,7 +57,8 @@ contract IntegrationTest is DssTest {
     address ESCROW;
     GemMock l1Token;
     L1TokenGateway l1Gateway;
-    address L1_ROUTER = 0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef;
+    address INBOX;
+    address L1_ROUTER;
 
     // L2-side
     address L2_GOV_RELAY;
@@ -79,11 +80,13 @@ contract IntegrationTest is DssTest {
         vm.label(address(ESCROW),       "ESCROW");
         vm.label(address(L2_GOV_RELAY), "L2_GOV_RELAY");
 
+        l2Domain = new ArbitrumDomain(config, getChain("arbitrum_one"), l1Domain);
+        INBOX = l2Domain.readConfigAddress("inbox");
+        vm.label(INBOX, "INBOX");
+        L1_ROUTER = l2Domain.readConfigAddress("l1Router");
         vm.label(L1_ROUTER, "L1_ROUTER");
         L2_ROUTER = L1RouterLike(L1_ROUTER).counterpartGateway();
         vm.label(L2_ROUTER, "L2_ROUTER");
-
-        l2Domain = new ArbitrumDomain(config, getChain("arbitrum_one"), l1Domain);
 
         address l1Gateway_ = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 2); // foundry increments a global nonce across domains
         l2Domain.selectFork();
@@ -102,7 +105,7 @@ contract IntegrationTest is DssTest {
             owner:     PAUSE_PROXY,
             l2Gateway: address(l2Gateway), 
             l1Router:  L1_ROUTER,
-            inbox:     l2Domain.readConfigAddress("inbox"),
+            inbox:     INBOX,
             escrow:    ESCROW
         }));
         assertEq(address(l1Gateway), l1Gateway_);
@@ -127,7 +130,7 @@ contract IntegrationTest is DssTest {
         GatewaysConfig memory cfg = GatewaysConfig({
             counterpartGateway: address(l2Gateway),
             l1Router: L1_ROUTER,
-            inbox: l2Domain.readConfigAddress("inbox"),
+            inbox: INBOX,
             l1Tokens: l1Tokens,
             l2Tokens: l2Tokens,
             gasPriceBid: 1 gwei,

@@ -9,6 +9,18 @@
       "type": "arbitrum",
       "rpc": "ARB_RPC_URL",
       "inbox": "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
+      "l1Router": "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef",
+      "arbSys": "0x0000000000000000000000000000000000000064"
+    },
+    "sepolia": {
+      "type": "root",
+      "rpc": "SEPOLIA_RPC_URL"
+    },
+    "arbitrum_one_sepolia": {
+      "type": "arbitrum",
+      "rpc": "ARBITRUM_ONE_SEPOLIA_RPC_URL",
+      "inbox": "0xaAe29B0366299461418F5324a79Afc425BE5ae21",
+      "l1Router": "0xcE18836b233C83325Cc8848CA4487e94C6288264",
       "arbSys": "0x0000000000000000000000000000000000000064"
     }
   }
