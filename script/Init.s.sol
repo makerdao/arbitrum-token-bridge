@@ -121,9 +121,9 @@ contract Init is Script {
             abi.encodeCall(L2TokenGatewaySpell.registerTokens, (cfg.l1Tokens, cfg.l2Tokens))
         ));
         cfg.xchainMsg = MessageParams({
-            maxGas:            getMaxGas(registerTokensCalldata),
-            gasPriceBid:       getGasPriceBid(),
-            maxSubmissionCost: 2 * getSubmissionFee(registerTokensCalldata)
+            maxGas:            getMaxGas(registerTokensCalldata) * 150 / 100,
+            gasPriceBid:       getGasPriceBid() * 200 / 100,
+            maxSubmissionCost: getSubmissionFee(registerTokensCalldata) * 300 / 100
         });
 
         L2TokenGatewayInstance memory l2GatewayInstance = L2TokenGatewayInstance({
