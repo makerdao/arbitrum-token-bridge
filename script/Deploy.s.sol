@@ -126,7 +126,7 @@ contract Deploy is Script {
 
         l2Domain.selectFork();
         vm.startBroadcast();
-        L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway(deployer, owner, l1Gateway, l2Router);
+        L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway(deployer, l2GovRelay, l1Gateway, l2Router);
         require(l2GatewayInstance.gateway == l2Gateway, "l2Gateway address mismatch");
         vm.stopBroadcast();
 

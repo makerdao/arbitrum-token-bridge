@@ -27,7 +27,7 @@ interface L1TokenGatewayLike {
     function l1Router() external view returns (address);
     function inbox() external view returns (address);
     function escrow() external view returns (address);
-    function registerTokens(address[] calldata, address[] calldata) external;
+    function registerToken(address l1Token, address l2Token) external;
 }
 
 interface L1RelayLike {
@@ -47,6 +47,7 @@ interface EscrowLike {
 
 struct MessageParams {
     uint256 maxGas;
+    uint256 gasPriceBid;
     uint256 maxSubmissionCost;
 }
 
@@ -56,9 +57,7 @@ struct GatewaysConfig {
     address inbox;
     address[] l1Tokens;
     address[] l2Tokens;
-    uint256 gasPriceBid;
-    MessageParams registerTknMsg;
-    MessageParams relyGatewayMsg;
+    MessageParams xchainMsg;
 }
 
 library TokenGatewayInit {
@@ -74,12 +73,11 @@ library TokenGatewayInit {
         L1RelayLike l1GovRelay = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY"));
         EscrowLike escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
 
-        uint256 registerTknL1Callvalue = cfg.registerTknMsg.maxSubmissionCost + cfg.registerTknMsg.maxGas * cfg.gasPriceBid;
-        uint256 relyGatewayL1Callvalue = cfg.relyGatewayMsg.maxSubmissionCost + cfg.relyGatewayMsg.maxGas * cfg.gasPriceBid;
+        uint256 l1CallValue = cfg.xchainMsg.maxSubmissionCost + cfg.xchainMsg.maxGas * cfg.xchainMsg.gasPriceBid;
 
         // not strictly necessary (as the retryable ticket creation would otherwise fail) 
         // but makes the eth balance requirement more explicit
-        require(address(l1GovRelay).balance >= registerTknL1Callvalue + relyGatewayL1Callvalue, "TokenGatewayInit/insufficient-relay-balance");
+        require(address(l1GovRelay).balance >= l1CallValue, "TokenGatewayInit/insufficient-relay-balance");
 
         for(uint256 i; i < cfg.l1Tokens.length; ++i) {
             (address l1Token, address l2Token) = (cfg.l1Tokens[i], cfg.l2Tokens[i]);
@@ -87,26 +85,17 @@ library TokenGatewayInit {
             require(l2Token != address(0), "TokenGatewayInit/invalid-l2-token");
             require(l1Gateway.l1ToL2Token(l1Token) == address(0), "TokenGatewayInit/existing-l1-token");
 
+            l1Gateway.registerToken(l1Token, l2Token);
             escrow.approve(l1Token, l1Gateway_, type(uint256).max);
         }
 
-        l1Gateway.registerTokens(cfg.l1Tokens, cfg.l2Tokens);
         l1GovRelay.relay({
             target:            l2GatewayInstance.spell,
             targetData:        abi.encodeCall(L2TokenGatewaySpell.registerTokens, (cfg.l1Tokens, cfg.l2Tokens)),
-            l1CallValue:       registerTknL1Callvalue,
-            maxGas:            cfg.registerTknMsg.maxGas,
-            gasPriceBid:       cfg.gasPriceBid,
-            maxSubmissionCost: cfg.registerTknMsg.maxSubmissionCost
-        });
-
-        l1GovRelay.relay({
-            target:            l2GatewayInstance.spell,
-            targetData:        abi.encodeCall(L2TokenGatewaySpell.relyGateway,cfg.l2Tokens),
-            l1CallValue:       relyGatewayL1Callvalue,
-            maxGas:            cfg.relyGatewayMsg.maxGas,
-            gasPriceBid:       cfg.gasPriceBid,
-            maxSubmissionCost: cfg.relyGatewayMsg.maxSubmissionCost
+            l1CallValue:       l1CallValue,
+            maxGas:            cfg.xchainMsg.maxGas,
+            gasPriceBid:       cfg.xchainMsg.gasPriceBid,
+            maxSubmissionCost: cfg.xchainMsg.maxSubmissionCost
         });
     }
 

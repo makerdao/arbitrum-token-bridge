@@ -94,34 +94,13 @@ contract L1TokenGatewayTest is DssTest {
     function testTokenRegistration() public {
         assertEq(gateway.l1ToL2Token(address(11)), address(0));
         assertEq(gateway.calculateL2TokenAddress(address(11)), address(0));
-        assertEq(gateway.l1ToL2Token(address(12)), address(0));
-        assertEq(gateway.calculateL2TokenAddress(address(12)), address(0));
-        assertEq(gateway.l1ToL2Token(address(13)), address(0));
-        assertEq(gateway.calculateL2TokenAddress(address(13)), address(0));
 
         vm.expectEmit(true, true, true, true);
-        emit TokenSet(address(11), address(21));
-        gateway.registerToken(address(11), address(21));
+        emit TokenSet(address(11), address(22));
+        gateway.registerToken(address(11), address(22));
 
-        assertEq(gateway.l1ToL2Token(address(11)), address(21));
-        assertEq(gateway.calculateL2TokenAddress(address(11)), address(21));
-
-        address[] memory l1Tokens = new address[](2);
-        address[] memory l2Tokens = new address[](2);
-        l1Tokens[0] = address(12);
-        l1Tokens[1] = address(13);
-        l2Tokens[0] = address(22);
-        l2Tokens[1] = address(23);
-        vm.expectEmit(true, true, true, true);
-        emit TokenSet(address(12), address(22));
-        vm.expectEmit(true, true, true, true);
-        emit TokenSet(address(13), address(23));
-        gateway.registerTokens(l1Tokens, l2Tokens);
-
-        assertEq(gateway.l1ToL2Token(address(12)), address(22));
-        assertEq(gateway.calculateL2TokenAddress(address(12)), address(22));
-        assertEq(gateway.l1ToL2Token(address(13)), address(23));
-        assertEq(gateway.calculateL2TokenAddress(address(13)), address(23));
+        assertEq(gateway.l1ToL2Token(address(11)), address(22));
+        assertEq(gateway.calculateL2TokenAddress(address(11)), address(22));
     }
 
     function testClose() public {

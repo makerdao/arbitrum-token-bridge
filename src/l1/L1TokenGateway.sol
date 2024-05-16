@@ -118,14 +118,6 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         emit TokenSet(l1Token, l2Token);
     }
 
-    function registerTokens(address[] calldata l1Tokens, address[] calldata l2Tokens) external auth {
-        for(uint256 i; i < l1Tokens.length; i++) {
-            (address l1Token, address l2Token) = (l1Tokens[i], l2Tokens[i]);
-            l1ToL2Token[l1Token] = l2Token;
-            emit TokenSet(l1Token, l2Token);
-        }
-    }
-
     // --- ITokenGateway ---
 
     /**

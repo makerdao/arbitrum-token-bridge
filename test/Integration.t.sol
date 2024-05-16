@@ -123,19 +123,18 @@ contract IntegrationTest is DssTest {
         l1Tokens[0] = address(l1Token);
         address[] memory l2Tokens = new address[](1);
         l2Tokens[0] = address(l2Token);
-        MessageParams memory msgParams = MessageParams({
-            maxGas: 300_000,
+        MessageParams memory xchainMsg = MessageParams({
+            gasPriceBid:       0.1 gwei,
+            maxGas:            300_000,
             maxSubmissionCost: 0.01 ether
         });
         GatewaysConfig memory cfg = GatewaysConfig({
             counterpartGateway: address(l2Gateway),
-            l1Router: L1_ROUTER,
-            inbox: INBOX,
-            l1Tokens: l1Tokens,
-            l2Tokens: l2Tokens,
-            gasPriceBid: 1 gwei,
-            registerTknMsg: msgParams,
-            relyGatewayMsg: msgParams
+            l1Router:           L1_ROUTER,
+            inbox:              INBOX,
+            l1Tokens:           l1Tokens,
+            l2Tokens:           l2Tokens,
+            xchainMsg:          xchainMsg
         });
 
         l1Domain.selectFork();
