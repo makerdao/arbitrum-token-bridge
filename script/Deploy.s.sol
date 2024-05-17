@@ -21,7 +21,6 @@ import "forge-std/Script.sol";
 
 import { ScriptTools } from "dss-test/ScriptTools.sol";
 import { Domain } from "dss-test/domains/Domain.sol";
-import { ArbitrumDomain } from "dss-test/domains/ArbitrumDomain.sol";
 import { TokenGatewayDeploy, L2TokenGatewayInstance } from "deploy/TokenGatewayDeploy.sol";
 import { ChainLog } from "deploy/mocks/ChainLog.sol";
 import { L1Escrow } from "deploy/mocks/L1Escrow.sol";
@@ -31,11 +30,6 @@ import { GemMock } from "test/mocks/GemMock.sol";
 
 interface L1RouterLike {
     function counterpartGateway() external view returns (address);
-    function inbox() external view returns (address);
-}
-
-interface L1DaiGatewayLike {
-    function l1Router() external view returns (address);
 }
 
 contract Deploy is Script {
@@ -53,8 +47,8 @@ contract Deploy is Script {
         string memory config = ScriptTools.readInput("config");
 
         Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
+        Domain l2Domain  = new Domain(config, getChain(vm.envOr("L2", string("arbitrum_one"))));
         l1Domain.selectFork();
-        ArbitrumDomain l2Domain  = new ArbitrumDomain(config, getChain(vm.envOr("L2", string("arbitrum_one"))), l1Domain);
 
         (,address deployer, ) = vm.readCallers();
         address l1Router = l2Domain.readConfigAddress("l1Router");
