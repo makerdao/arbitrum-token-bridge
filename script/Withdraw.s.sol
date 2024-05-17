@@ -21,7 +21,7 @@ import "forge-std/Script.sol";
 
 import { ScriptTools } from "dss-test/ScriptTools.sol";
 import { Domain } from "dss-test/domains/Domain.sol";
-import { BridgedDomain } from "dss-test/domains/BridgedDomain.sol";
+import { ArbitrumDomain } from "dss-test/domains/ArbitrumDomain.sol";
 
 interface GemLike {
     function approve(address, uint256) external;
@@ -45,7 +45,10 @@ contract Withdraw is Script {
         string memory deps = ScriptTools.loadDependencies(); // loads from FOUNDRY_SCRIPT_DEPS
         
         Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
-        Domain l2Domain = new Domain(config, getChain(vm.envOr("L2", string("arbitrum_one"))));
+        l1Domain.selectFork();
+
+        // Note that ArbitrumDomain is required for l2Domain (instead of Domain) in order to override the custom OpCodes used in ArbSys
+        ArbitrumDomain l2Domain = new ArbitrumDomain(config, getChain(vm.envOr("L2", string("arbitrum_one"))), l1Domain);
         l2Domain.selectFork();
 
        (,address deployer, ) = vm.readCallers();
@@ -54,9 +57,12 @@ contract Withdraw is Script {
         address nst = deps.readAddress(".l1Nst");
         address l2Nst = deps.readAddress(".l2Nst");
 
-        uint256 amount = 1 ether;
+        uint256 amount = 0.01 ether;
+
         vm.startBroadcast();
         GemLike(l2Nst).approve(l2Gateway, type(uint256).max);
+
+        // Note that outboundTransfer can only succeed if --skip-simulation was used due to usage of custom Arb OpCodes in ArbSys
         GatewayLike(l2Gateway).outboundTransfer({
             l1Token: nst, 
             to:      deployer, 
