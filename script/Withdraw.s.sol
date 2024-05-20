@@ -70,5 +70,7 @@ contract Withdraw is Script {
             data:    ""
         });
         vm.stopBroadcast();
+
+        // The message can be relayed manually on https://retryable-dashboard.arbitrum.io/
     }
 }
