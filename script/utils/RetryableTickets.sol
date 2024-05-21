@@ -83,8 +83,7 @@ contract RetryableTickets {
             "[{\"to\": \"", 
             vm.toString(address(0xc8)), // NodeInterface
             "\", \"data\": \"",    
-            vm.toString(data)
-            ,
+            vm.toString(data),
             "\"}]"
         )));
         maxGas = vm.parseUint(vm.toString(res));
