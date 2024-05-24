@@ -110,8 +110,8 @@ library TokenGatewayInit {
         // sanity checks
         require(l1Gateway.isOpen() == 1, "TokenGatewayInit/not-open");
         require(l1Gateway.counterpartGateway() == cfg.counterpartGateway, "TokenGatewayInit/counterpart-gateway-mismatch");
-        require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/incorrect-l1-router");
-        require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/incorrect-inbox");
+        require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/l1-router-mismatch");
+        require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/inbox-mismatch");
         require(l1Gateway.escrow() == dss.chainlog.getAddress("ARBITRUM_ESCROW"), "TokenGatewayInit/incorrect-escrow");
 
         addTokens(dss, l1Gateway_, l2GatewayInstance, cfg);
