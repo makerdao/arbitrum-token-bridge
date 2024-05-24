@@ -20,8 +20,8 @@ import { ScriptTools } from "dss-test/ScriptTools.sol";
 
 import { L2TokenGatewayInstance } from "./L2TokenGatewayInstance.sol";
 import { L2TokenGatewaySpell } from "./L2TokenGatewaySpell.sol";
-import { L1TokenGateway } from "src/l1/L1TokenGateway.sol";
-import { L2TokenGateway } from "src/l2/L2TokenGateway.sol";
+import { L1TokenGateway } from "src/L1TokenGateway.sol";
+import { L2TokenGateway } from "src/L2TokenGateway.sol";
 
 library TokenGatewayDeploy {
     function deployL1Gateway(

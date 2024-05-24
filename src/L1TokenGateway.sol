@@ -17,11 +17,11 @@
 
 pragma solidity ^0.8.21;
 
-import { ITokenGateway } from "../arbitrum/ITokenGateway.sol";
-import { IL1ArbitrumGateway } from "../arbitrum/IL1ArbitrumGateway.sol";
-import { ICustomGateway } from "../arbitrum/ICustomGateway.sol";
-import { IERC165, ERC165 } from "../arbitrum/ERC165.sol";
-import { L1ArbitrumMessenger } from "../arbitrum/L1ArbitrumMessenger.sol";
+import { ITokenGateway } from "src/arbitrum/ITokenGateway.sol";
+import { IL1ArbitrumGateway } from "src/arbitrum/IL1ArbitrumGateway.sol";
+import { ICustomGateway } from "src/arbitrum/ICustomGateway.sol";
+import { IERC165, ERC165 } from "src/arbitrum/ERC165.sol";
+import { L1ArbitrumMessenger } from "src/arbitrum/L1ArbitrumMessenger.sol";
 
 interface TokenLike {
     function transferFrom(address, address, uint256) external;

@@ -9,8 +9,6 @@ fs_permissions = [
     { access = "read-write", path = "./script/output/"}
 ]
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
-
 [etherscan]
 mainnet = { key = "${ETHERSCAN_KEY}" }
 sepolia = { key = "${ETHERSCAN_KEY}", chain = 11155111 }

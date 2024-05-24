@@ -19,7 +19,7 @@ pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
 
-import { L1TokenGateway } from "src/l1/L1TokenGateway.sol";
+import { L1TokenGateway } from "src/L1TokenGateway.sol";
 import { InboxMock, BridgeMock, OutboxMock } from "test/mocks/InboxMock.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
 

@@ -19,7 +19,7 @@ pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
 
-import { L2TokenGateway } from "src/l2/L2TokenGateway.sol";
+import { L2TokenGateway } from "src/L2TokenGateway.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
 import { ArbSysMock } from "test/mocks/ArbSysMock.sol";
 import { AddressAliasHelper } from "src/arbitrum/AddressAliasHelper.sol";

@@ -25,8 +25,8 @@ import { TokenGatewayDeploy } from "deploy/TokenGatewayDeploy.sol";
 import { L2TokenGatewaySpell } from "deploy/L2TokenGatewaySpell.sol";
 import { L2TokenGatewayInstance } from "deploy/L2TokenGatewayInstance.sol";
 import { TokenGatewayInit, GatewaysConfig, MessageParams } from "deploy/TokenGatewayInit.sol";
-import { L1TokenGateway } from "src/l1/L1TokenGateway.sol";
-import { L2TokenGateway } from "src/l2/L2TokenGateway.sol";
+import { L1TokenGateway } from "src/L1TokenGateway.sol";
+import { L2TokenGateway } from "src/L2TokenGateway.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
 
 interface L1RelayLike {

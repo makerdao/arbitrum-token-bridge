@@ -16,7 +16,7 @@
 
 pragma solidity >=0.8.0;
 
-import { L2TokenGateway } from "src/l2/L2TokenGateway.sol";
+import { L2TokenGateway } from "src/L2TokenGateway.sol";
 
 interface AuthLike {
     function rely(address usr) external;

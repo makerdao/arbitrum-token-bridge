@@ -17,10 +17,10 @@
 
 pragma solidity ^0.8.21;
 
-import { ITokenGateway } from "../arbitrum/ITokenGateway.sol";
-import { ICustomGateway } from "../arbitrum/ICustomGateway.sol";
-import { AddressAliasHelper } from "../arbitrum/AddressAliasHelper.sol";
-import { L2ArbitrumMessenger } from "../arbitrum/L2ArbitrumMessenger.sol";
+import { ITokenGateway } from "src/arbitrum/ITokenGateway.sol";
+import { ICustomGateway } from "src/arbitrum/ICustomGateway.sol";
+import { AddressAliasHelper } from "src/arbitrum/AddressAliasHelper.sol";
+import { L2ArbitrumMessenger } from "src/arbitrum/L2ArbitrumMessenger.sol";
 
 interface TokenLike {
     function mint(address, uint256) external;
