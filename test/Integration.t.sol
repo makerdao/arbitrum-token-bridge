@@ -211,7 +211,6 @@ contract IntegrationTest is DssTest {
 
     function testDepositViaRouter() public {
         _deposit(L1_ROUTER);
-
     }
 
     function _withdraw(address target) internal {
