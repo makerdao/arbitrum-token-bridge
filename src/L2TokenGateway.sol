@@ -218,7 +218,7 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         bytes calldata /* data */
     ) external payable onlyCounterpartGateway {
         address l2Token = l1ToL2Token[l1Token];
-        require(l2Token != address(0), "L2TokenGateway/invalid-token"); // TODO: we can retry if this reverts but note that L2ArbitrumGateway triggers withdrawal instead of reverting
+        require(l2Token != address(0), "L2TokenGateway/invalid-token");
 
         TokenLike(l2Token).mint(to, amount);
 
