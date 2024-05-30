@@ -80,11 +80,11 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         address _counterpartGateway,
         address _l2Router
     ) {
-        wards[msg.sender] = 1;
-        emit Rely(msg.sender);
-
         counterpartGateway = _counterpartGateway;
         l2Router = _l2Router;
+
+        wards[msg.sender] = 1;
+        emit Rely(msg.sender);
     }
 
     // --- administration ---
@@ -107,17 +107,6 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
     function registerToken(address l1Token, address l2Token) external auth {
         l1ToL2Token[l1Token] = l2Token;
         emit TokenSet(l1Token, l2Token);
-    }
-
-    // --- ITokenGateway ---
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @param l1Token address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1Token) external view returns (address) {
-        return l1ToL2Token[l1Token];
     }
 
     // --- outbound transfers ---
@@ -223,5 +212,16 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         TokenLike(l2Token).mint(to, amount);
 
         emit DepositFinalized(l1Token, from, to, amount);
+    }
+
+    // --- router integration ---
+
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @param l1Token address of L1 token
+     * @return l2Token L2 address of a bridged ERC20 token
+     */
+    function calculateL2TokenAddress(address l1Token) external view returns (address l2Token) {
+        l2Token = l1ToL2Token[l1Token];
     }
 }

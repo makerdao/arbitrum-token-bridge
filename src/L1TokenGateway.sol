@@ -87,13 +87,13 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         address _inbox,
         address _escrow
     ) {
-        wards[msg.sender] = 1;
-        emit Rely(msg.sender);
-
         counterpartGateway = _counterpartGateway;
         l1Router = _l1Router;
         inbox = _inbox;
         escrow = _escrow;
+
+        wards[msg.sender] = 1;
+        emit Rely(msg.sender);
     }
 
     // --- administration ---
@@ -116,32 +116,6 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
     function registerToken(address l1Token, address l2Token) external auth {
         l1ToL2Token[l1Token] = l2Token;
         emit TokenSet(l1Token, l2Token);
-    }
-
-    // --- ITokenGateway ---
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @param l1Token address of L1 token
-     * @return l2Token L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1Token) external view override returns (address l2Token) {
-        l2Token = l1ToL2Token[l1Token];
-    }
-
-    // --- IL1ArbitrumGateway ---
-
-    /**
-     * @notice This contract only partially implements ERC165 as only a small subset of the supported interfaceId's are known
-     * by the function below. This function is only used to maintain compatibility with the Arbitrum standard L1 token gateway.
-     * See https://github.com/OffchainLabs/token-bridge-contracts/blob/c9e133600afb4e99ee5370c97a14cc5c666dd62c/contracts/tokenbridge/ethereum/gateway/L1ArbitrumGateway.sol#L331
-     */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        // registering interfaces that is added after arb-bridge-peripherals >1.0.11
-        // using function selector instead of single function interfaces to reduce bloat
-        return
-            interfaceId == this.outboundTransferCustomRefund.selector ||
-            super.supportsInterface(interfaceId);
     }
 
     // --- outbound transfers ---
@@ -278,4 +252,27 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         emit WithdrawalFinalized(l1Token, from, to, 0, amount);
     }
 
+    // --- router and other integrations ---
+
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @param l1Token address of L1 token
+     * @return l2Token L2 address of a bridged ERC20 token
+     */
+    function calculateL2TokenAddress(address l1Token) external view override returns (address l2Token) {
+        l2Token = l1ToL2Token[l1Token];
+    }
+
+    /**
+     * @notice This contract only partially implements ERC165 as only a small subset of the supported interfaceId's are known
+     * by the function below. This function is only used to maintain compatibility with the Arbitrum standard L1 token gateway.
+     * See https://github.com/OffchainLabs/token-bridge-contracts/blob/c9e133600afb4e99ee5370c97a14cc5c666dd62c/contracts/tokenbridge/ethereum/gateway/L1ArbitrumGateway.sol#L331
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        // registering interfaces that is added after arb-bridge-peripherals >1.0.11
+        // using function selector instead of single function interfaces to reduce bloat
+        return
+            interfaceId == this.outboundTransferCustomRefund.selector ||
+            super.supportsInterface(interfaceId);
+    }
 }
