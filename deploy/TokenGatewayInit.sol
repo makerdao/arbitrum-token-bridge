@@ -61,17 +61,23 @@ struct GatewaysConfig {
 }
 
 library TokenGatewayInit {
-    function addTokens(
+    function initGateways(
         DssInstance memory            dss,
         address                       l1Gateway_,
         L2TokenGatewayInstance memory l2GatewayInstance,
         GatewaysConfig memory         cfg
     ) internal {
-        require(cfg.l1Tokens.length == cfg.l2Tokens.length, "TokenGatewayInit/token-arrays-mismatch");
-
         L1TokenGatewayLike l1Gateway = L1TokenGatewayLike(l1Gateway_);
-        L1RelayLike l1GovRelay = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY"));
-        EscrowLike escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
+        L1RelayLike       l1GovRelay = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY"));
+        EscrowLike            escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
+
+        // sanity checks
+        require(l1Gateway.isOpen() == 1, "TokenGatewayInit/not-open");
+        require(l1Gateway.counterpartGateway() == cfg.counterpartGateway, "TokenGatewayInit/counterpart-gateway-mismatch");
+        require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/l1-router-mismatch");
+        require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/inbox-mismatch");
+        require(l1Gateway.escrow() == address(escrow), "TokenGatewayInit/incorrect-escrow");
+        require(cfg.l1Tokens.length == cfg.l2Tokens.length, "TokenGatewayInit/token-arrays-mismatch");
 
         uint256 l1CallValue = cfg.xchainMsg.maxSubmissionCost + cfg.xchainMsg.maxGas * cfg.xchainMsg.gasPriceBid;
 
@@ -97,24 +103,6 @@ library TokenGatewayInit {
             gasPriceBid:       cfg.xchainMsg.gasPriceBid,
             maxSubmissionCost: cfg.xchainMsg.maxSubmissionCost
         });
-    }
-
-    function initGateways(
-        DssInstance memory            dss,
-        address                       l1Gateway_,
-        L2TokenGatewayInstance memory l2GatewayInstance,
-        GatewaysConfig memory         cfg
-    ) internal {
-        L1TokenGatewayLike l1Gateway    = L1TokenGatewayLike(l1Gateway_);
-
-        // sanity checks
-        require(l1Gateway.isOpen() == 1, "TokenGatewayInit/not-open");
-        require(l1Gateway.counterpartGateway() == cfg.counterpartGateway, "TokenGatewayInit/counterpart-gateway-mismatch");
-        require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/l1-router-mismatch");
-        require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/inbox-mismatch");
-        require(l1Gateway.escrow() == dss.chainlog.getAddress("ARBITRUM_ESCROW"), "TokenGatewayInit/incorrect-escrow");
-
-        addTokens(dss, l1Gateway_, l2GatewayInstance, cfg);
 
         dss.chainlog.setAddress("ARBITRUM_TOKEN_BRIDGE", l1Gateway_);
     }
