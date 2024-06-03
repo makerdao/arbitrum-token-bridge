@@ -16,17 +16,22 @@
 
 pragma solidity >=0.8.0;
 
-import { L2TokenGateway } from "src/L2TokenGateway.sol";
+interface L2TokenGatewayLike {
+    function rely(address) external;
+    function deny(address) external;
+    function close() external;
+    function registerToken(address, address) external;
+}
 
 interface AuthLike {
     function rely(address usr) external;
 }
 
-// A reusable L2 spell to be used by the L2GovernanceRelay to exert admin control over L2TokenGateway
+// A reusable L2 spell to be used by the L2GovernanceRelay to exert admin control over L2TokenGatewayLike
 contract L2TokenGatewaySpell {
-    L2TokenGateway public immutable l2Gateway;
+    L2TokenGatewayLike public immutable l2Gateway;
     constructor(address l2Gateway_) {
-        l2Gateway = L2TokenGateway(l2Gateway_);
+        l2Gateway = L2TokenGatewayLike(l2Gateway_);
     }
 
     function rely(address usr) external { l2Gateway.rely(usr); }
