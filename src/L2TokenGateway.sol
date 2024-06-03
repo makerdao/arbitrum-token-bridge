@@ -134,7 +134,7 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         uint256, /* maxGas */
         uint256, /* gasPriceBid */
         bytes calldata data
-    ) public payable override returns (bytes memory res) {
+    ) public payable returns (bytes memory res) {
         require(msg.value == 0, "L2TokenGateway/no-value-allowed");
         require(isOpen == 1, "L2TokenGateway/closed");
         address l2Token = l1ToL2Token[l1Token];

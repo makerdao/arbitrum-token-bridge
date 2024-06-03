@@ -259,7 +259,7 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
      * @param l1Token address of L1 token
      * @return l2Token L2 address of a bridged ERC20 token
      */
-    function calculateL2TokenAddress(address l1Token) external view override returns (address l2Token) {
+    function calculateL2TokenAddress(address l1Token) external view returns (address l2Token) {
         l2Token = l1ToL2Token[l1Token];
     }
 
