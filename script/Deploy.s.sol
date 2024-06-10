@@ -70,7 +70,17 @@ contract Deploy is Script {
 
             l2Domain.selectFork();
             l2GovRelay = L1GovernanceRelay(payable(l1GovRelay)).l2GovernanceRelay();
-            // TODO: deploy actual L2 token contracts { l2Nst, l2Ngt }
+
+            l2Domain.selectFork();
+            vm.startBroadcast();
+            // TODO: replace with actual L2 token contracts { l2Nst, l2Ngt }
+            tokens.l2Nst = address(new GemMock(0));
+            tokens.l2Ngt = address(new GemMock(0));
+            GemMock(tokens.l2Nst).rely(l2GovRelay);
+            GemMock(tokens.l2Ngt).rely(l2GovRelay);
+            GemMock(tokens.l2Nst).deny(deployer);
+            GemMock(tokens.l2Ngt).deny(deployer);
+            vm.stopBroadcast();
         } else {
             owner = deployer;
             vm.startBroadcast();
