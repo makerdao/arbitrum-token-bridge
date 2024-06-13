@@ -41,6 +41,7 @@ contract L1TokenGatewayTest is DssTest {
         uint256 indexed _exitNum,
         uint256 _amount
     );
+    event TxToL2(address indexed _from, address indexed _to, uint256 indexed _seqNum, bytes _data);
 
     GemMock l1Token;
     L1TokenGateway gateway;
@@ -135,6 +136,9 @@ contract L1TokenGatewayTest is DssTest {
         uint256 balanceBefore = l1Token.balanceOf(address(this));
         l1Token.approve(address(gateway), type(uint256).max);
 
+        bytes memory outboundCalldata = gateway.getOutboundCalldata(address(l1Token), address(this), address(0xb0b), 100 ether, "");
+        vm.expectEmit(true, true, true, true);
+        emit TxToL2(address(this), counterpartGateway, 0, outboundCalldata);
         vm.expectEmit(true, true, true, true);
         emit DepositInitiated(address(l1Token), address(this), address(0xb0b), 0, 100 ether);
         gateway.outboundTransfer(address(l1Token), address(0xb0b), 100 ether, 1_000_000, 1 gwei, abi.encode(0.1 ether, ""));

@@ -42,6 +42,7 @@ contract L2TokenGatewayTest is DssTest {
         uint256 _exitNum,
         uint256 _amount
     );
+    event TxToL1(address indexed _from, address indexed _to, uint256 indexed _id, bytes _data);
 
     address ARB_SYS_ADDRESS = address(100);
     address l1Token = address(0xf00);
@@ -137,6 +138,9 @@ contract L2TokenGatewayTest is DssTest {
         assertEq(l2Token.balanceOf(address(this)), balanceBefore - 100 ether);
         assertEq(l2Token.totalSupply(), supplyBefore - 100 ether);
 
+        bytes memory outboundCalldata = gateway.getOutboundCalldata(address(l1Token), address(this), address(0xb0b), 100 ether, "");
+        vm.expectEmit(true, true, true, true);
+        emit TxToL1(address(this), counterpartGateway, 0, outboundCalldata);
         vm.expectEmit(true, true, true, true);
         emit WithdrawalInitiated(l1Token, address(this), address(0xb0b), 0, 0, 100 ether);
         gateway.outboundTransfer(l1Token, address(0xb0b), 100 ether, "");
