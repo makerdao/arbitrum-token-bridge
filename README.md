@@ -61,7 +61,7 @@ forge script script/Deposit.s.sol:Deposit --sender $DEPLOYER --private-key $PRIV
 To subsequently perform a test withdrawal, use the following command:
 
 ```
-forge script script/Deposit.s.sol:Deposit --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --multi --broadcast --skip-simulation
+forge script script/Withdraw.s.sol:Withdraw --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --multi --broadcast --skip-simulation
 ```
 
 Note that the `--skip-simulation` flag is required due to usage of custom Arb OpCodes in ArbSys.
