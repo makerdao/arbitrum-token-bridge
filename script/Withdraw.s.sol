@@ -52,19 +52,18 @@ contract Withdraw is Script {
         l2Domain.selectFork();
 
        (,address deployer, ) = vm.readCallers();
-        address l1Gateway = deps.readAddress(".l1Gateway");
         address l2Gateway = deps.readAddress(".l2Gateway");
-        address nst = deps.readAddress(".l1Nst");
-        address l2Nst = deps.readAddress(".l2Nst");
+        address l1Token = deps.readAddressArray(".l1Tokens")[0];
+        address l2Token = deps.readAddressArray(".l2Tokens")[0];
 
         uint256 amount = 0.01 ether;
 
         vm.startBroadcast();
-        GemLike(l2Nst).approve(l2Gateway, type(uint256).max);
+        GemLike(l2Token).approve(l2Gateway, type(uint256).max);
 
         // Note that outboundTransfer can only succeed if --skip-simulation was used due to usage of custom Arb OpCodes in ArbSys
         GatewayLike(l2Gateway).outboundTransfer({
-            l1Token: nst, 
+            l1Token: l1Token, 
             to:      deployer, 
             amount:  amount, 
             data:    ""

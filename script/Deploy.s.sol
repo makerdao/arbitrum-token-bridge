@@ -32,16 +32,32 @@ interface L1RouterLike {
     function counterpartGateway() external view returns (address);
 }
 
+// TODO: Add to dss-test/ScriptTools.sol
+library ScriptToolsExtended {
+    VmSafe private constant vm = VmSafe(address(uint160(uint256(keccak256("hevm cheat code")))));
+    function exportContracts(string memory name, string memory label, address[] memory addr) internal {
+        name = vm.envOr("FOUNDRY_EXPORTS_NAME", name);
+        string memory json = vm.serializeAddress(ScriptTools.EXPORT_JSON_KEY, label, addr);
+        ScriptTools._doExport(name, json);
+    }
+}
+
+// TODO: Add to dss-test/domains/Domain.sol
+library DomainExtended {
+    using stdJson for string;
+    function hasConfigKey(Domain domain, string memory key) internal view returns (bool) {
+        bytes memory raw = domain.config().parseRaw(string.concat(".domains.", domain.details().chainAlias, ".", key));
+        return raw.length > 0;
+    }
+    function readConfigAddresses(Domain domain, string memory key) internal view returns (address[] memory) {
+        return domain.config().readAddressArray(string.concat(".domains.", domain.details().chainAlias, ".", key));
+    }
+}
+
 contract Deploy is Script {
+    using DomainExtended for Domain;
 
     address constant LOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
-
-    struct Tokens {
-        address l1Nst;
-        address l1Ngt;
-        address l2Nst;
-        address l2Ngt;
-    } 
 
     function run() external {
         string memory config = ScriptTools.readInput("config");
@@ -59,28 +75,17 @@ contract Deploy is Script {
         address escrow;
         address l1GovRelay;
         address l2GovRelay;
-        Tokens memory tokens;
+        address[] memory l1Tokens;
+        address[] memory l2Tokens;
+
         if (LOG.code.length > 0) {
             chainlog = ChainLog(LOG);
             owner = chainlog.getAddress("MCD_PAUSE_PROXY");
             escrow = chainlog.getAddress("ARBITRUM_ESCROW");
             l1GovRelay = chainlog.getAddress("ARBITRUM_GOV_RELAY");
-            tokens.l1Nst = chainlog.getAddress("NST");
-            tokens.l1Ngt = chainlog.getAddress("NGT");
-
-            l2Domain.selectFork();
+            l1Tokens = l1Domain.readConfigAddresses("tokens");
+            l2Tokens = l2Domain.readConfigAddresses("tokens");
             l2GovRelay = L1GovernanceRelay(payable(l1GovRelay)).l2GovernanceRelay();
-
-            l2Domain.selectFork();
-            vm.startBroadcast();
-            // TODO: replace with actual L2 token contracts { l2Nst, l2Ngt }
-            tokens.l2Nst = address(new GemMock(0));
-            tokens.l2Ngt = address(new GemMock(0));
-            GemMock(tokens.l2Nst).rely(l2GovRelay);
-            GemMock(tokens.l2Ngt).rely(l2GovRelay);
-            GemMock(tokens.l2Nst).deny(deployer);
-            GemMock(tokens.l2Ngt).deny(deployer);
-            vm.stopBroadcast();
         } else {
             owner = deployer;
             vm.startBroadcast();
@@ -95,23 +100,34 @@ contract Deploy is Script {
             l1Domain.selectFork();
             vm.startBroadcast();
             l1GovRelay = address(new L1GovernanceRelay(inbox, l2GovRelay_));
-            tokens.l1Nst = address(new GemMock(1_000_000_000 ether));
-            tokens.l1Ngt = address(new GemMock(1_000_000_000 ether));
+
+            if (l1Domain.hasConfigKey("tokens")) {
+                l1Tokens = l1Domain.readConfigAddresses("tokens");
+            } else {
+                l1Tokens = new address[](2);
+                l1Tokens[0] = address(new GemMock(1_000_000_000 ether));
+                l1Tokens[1] = address(new GemMock(1_000_000_000 ether));
+            }
+
             chainlog.setAddress("ARBITRUM_GOV_RELAY", l1GovRelay);
-            chainlog.setAddress("NST", tokens.l1Nst);
-            chainlog.setAddress("NGT", tokens.l1Ngt);
             vm.stopBroadcast();
 
             l2Domain.selectFork();
             vm.startBroadcast();
             l2GovRelay = address(new L2GovernanceRelay(l1GovRelay));
             require(l2GovRelay == l2GovRelay_, "l2GovRelay address mismatch");
-            tokens.l2Nst = address(new GemMock(0));
-            tokens.l2Ngt = address(new GemMock(0));
-            GemMock(tokens.l2Nst).rely(l2GovRelay);
-            GemMock(tokens.l2Ngt).rely(l2GovRelay);
-            GemMock(tokens.l2Nst).deny(deployer);
-            GemMock(tokens.l2Ngt).deny(deployer);
+
+            if (l2Domain.hasConfigKey("tokens")) {
+                l2Tokens = l2Domain.readConfigAddresses("tokens");
+            } else {
+                l2Tokens = new address[](2);
+                l2Tokens[0] = address(new GemMock(0));
+                l2Tokens[1] = address(new GemMock(0));
+                GemMock(l2Tokens[0]).rely(l2GovRelay);
+                GemMock(l2Tokens[1]).rely(l2GovRelay);
+                GemMock(l2Tokens[0]).deny(deployer);
+                GemMock(l2Tokens[1]).deny(deployer);
+            }
             vm.stopBroadcast();
         }
 
@@ -147,9 +163,7 @@ contract Deploy is Script {
         ScriptTools.exportContract("deployed", "l1Gateway", l1Gateway);
         ScriptTools.exportContract("deployed", "l2Gateway", l2Gateway);
         ScriptTools.exportContract("deployed", "l2GatewaySpell", l2GatewayInstance.spell);
-        ScriptTools.exportContract("deployed", "l1Nst", tokens.l1Nst);
-        ScriptTools.exportContract("deployed", "l2Nst", tokens.l2Nst);
-        ScriptTools.exportContract("deployed", "l1Ngt", tokens.l1Ngt);
-        ScriptTools.exportContract("deployed", "l2Ngt", tokens.l2Ngt);
+        ScriptToolsExtended.exportContracts("deployed", "l1Tokens", l1Tokens);
+        ScriptToolsExtended.exportContracts("deployed", "l2Tokens", l2Tokens);
     }
 }

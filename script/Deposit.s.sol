@@ -60,12 +60,13 @@ contract Deposit is Script {
        (,address deployer, ) = vm.readCallers();
         address l1Gateway = deps.readAddress(".l1Gateway");
         address l2Gateway = deps.readAddress(".l2Gateway");
-        address nst = deps.readAddress(".l1Nst");
+        address l1Token = deps.readAddressArray(".l1Tokens")[0];
+
         RetryableTickets retryable = new RetryableTickets(l1Domain, l2Domain, l1Gateway, l2Gateway);
 
         uint256 amount = 1 ether;
         bytes memory finalizeDepositCalldata = GatewayLike(l1Gateway).getOutboundCalldata({
-            l1Token: nst, 
+            l1Token: l1Token, 
             from:    deployer,
             to:      deployer, 
             amount:  amount,
@@ -77,9 +78,9 @@ contract Deposit is Script {
         uint256 l1CallValue = maxSubmissionCost + maxGas * gasPriceBid;
 
         vm.startBroadcast();
-        GemLike(nst).approve(l1Gateway, type(uint256).max);
+        GemLike(l1Token).approve(l1Gateway, type(uint256).max);
         GatewayLike(l1Gateway).outboundTransfer{value: l1CallValue}({
-            l1Token:     nst, 
+            l1Token:     l1Token, 
             to:          deployer, 
             amount:      amount, 
             maxGas:      maxGas, 

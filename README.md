@@ -34,13 +34,13 @@ L2=arbitrum_one_sepolia
 
 ## Deploy the bridge
 
+Deploy the L1 and L2 tokens (not included in this repo) that must be supported by the bridge then fill in the addresses of these tokens in `script/input/1/config.json` as two arrays of address strings under the `tokens` key for both the L1 and L2 domains. On testnet, if the `tokens` key is missing for a domain, mock tokens will automatically be deployed for that domain.
+
 The following command deploys the L1 and L2 sides of the bridge:
 
 ```
 forge script script/Deploy.s.sol:Deploy --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --verify --multi --broadcast
 ```
-
-Note that the deployment script deploys mocks for the L2 contracts. For production deployment, the actual L2 token contracts must be used instead (they are not included in this repo).
 
 ## Initialize the bridge
 
@@ -52,7 +52,7 @@ forge script script/Init.s.sol:Init --sender $DEPLOYER --private-key $PRIVATE_KE
 
 ## Test the deployment
 
-To perform a test deposit, use the following command:
+Make sure the deployer account holds at least 10^18 units of the first token listed under "l1Tokens" in `script/output/1/deployed-latest.json`. To perform a test deposit of that token, use the following command:
 
 ```
 forge script script/Deposit.s.sol:Deposit --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --multi --broadcast
