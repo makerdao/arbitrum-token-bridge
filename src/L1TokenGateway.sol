@@ -149,10 +149,11 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         require(l1ToL2Token[l1Token] != address(0), "L1TokenGateway/invalid-token");
         address from;
         uint256 seqNum;
-        bytes memory extraData;
+        bytes memory extraData = data;
         {
+            (from, extraData) = msg.sender == l1Router ? abi.decode(extraData, (address, bytes)) : (msg.sender, extraData); // router encoded
             uint256 maxSubmissionCost;
-            (from, maxSubmissionCost, extraData) = parseOutboundData(data);
+            (maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));  // user encoded
             require(extraData.length == 0, "L1TokenGateway/extra-data-not-allowed");
 
             TokenLike(l1Token).transferFrom(from, escrow, amount);
@@ -172,19 +173,6 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         emit DepositInitiated(l1Token, from, to, seqNum, amount);
 
         res = abi.encode(seqNum);
-    }
-
-    function parseOutboundData(bytes memory data)
-        internal
-        view
-        returns (
-            address from,
-            uint256 maxSubmissionCost,
-            bytes memory extraData
-        )
-    {
-        (from, extraData) = msg.sender == l1Router ? abi.decode(data, (address, bytes)) : (msg.sender, data); // router encoded
-        (maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));  // user encoded
     }
 
     function getOutboundCalldata(

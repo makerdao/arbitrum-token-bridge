@@ -139,8 +139,9 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         require(isOpen == 1, "L2TokenGateway/closed");
         address l2Token = l1ToL2Token[l1Token];
         require(l2Token != address(0), "L2TokenGateway/invalid-token");
-
-        (address from, bytes memory extraData) = parseOutboundData(data);
+        address from;
+        bytes memory extraData = data;
+        (from, extraData) = msg.sender == l2Router ? abi.decode(extraData, (address, bytes)) : (msg.sender, extraData);
         require(extraData.length == 0, "L2TokenGateway/extra-data-not-allowed");
 
         TokenLike(l2Token).burn(from, amount);
@@ -153,10 +154,6 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         emit WithdrawalInitiated(l1Token, from, to, id, 0, amount);
 
         res = abi.encode(id);
-    }
-
-    function parseOutboundData(bytes memory data) internal view returns (address from, bytes memory extraData) {
-        (from, extraData) = msg.sender == l2Router ? abi.decode(data, (address, bytes)) : (msg.sender, data);
     }
 
     function getOutboundCalldata(
