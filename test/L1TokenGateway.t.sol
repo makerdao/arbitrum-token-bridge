@@ -62,7 +62,6 @@ contract L1TokenGatewayTest is DssTest {
         vm.expectEmit(true, true, true, true);
         emit Rely(address(this));
         L1TokenGateway g = new L1TokenGateway(address(111), address(222), address(333), address(444));
-        
 
         assertEq(g.isOpen(), 1);
         assertEq(g.counterpartGateway(), address(111));
@@ -172,7 +171,6 @@ contract L1TokenGatewayTest is DssTest {
         OutboxMock(bridge.activeOutbox()).setL2ToL1Sender(address(0xbad));
         vm.expectRevert("L1TokenGateway/only-counterpart-gateway");
         vm.prank(address(bridge)); gateway.finalizeInboundTransfer(address(l1Token), address(0xb0b), address(0xced), 1 ether, "");
-
 
         OutboxMock(bridge.activeOutbox()).setL2ToL1Sender(counterpartGateway);
         vm.expectRevert("L1TokenGateway/invalid-token");

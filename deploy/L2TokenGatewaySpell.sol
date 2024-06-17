@@ -27,9 +27,10 @@ interface AuthLike {
     function rely(address usr) external;
 }
 
-// A reusable L2 spell to be used by the L2GovernanceRelay to exert admin control over L2TokenGatewayLike
+// A reusable L2 spell to be used by the L2GovernanceRelay to exert admin control over L2TokenGateway
 contract L2TokenGatewaySpell {
     L2TokenGatewayLike public immutable l2Gateway;
+
     constructor(address l2Gateway_) {
         l2Gateway = L2TokenGatewayLike(l2Gateway_);
     }

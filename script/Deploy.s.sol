@@ -63,7 +63,7 @@ contract Deploy is Script {
         string memory config = ScriptTools.readInput("config");
 
         Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
-        Domain l2Domain  = new Domain(config, getChain(vm.envOr("L2", string("arbitrum_one"))));
+        Domain l2Domain = new Domain(config, getChain(vm.envOr("L2", string("arbitrum_one"))));
         l1Domain.selectFork();
 
         (,address deployer, ) = vm.readCallers();
