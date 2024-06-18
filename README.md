@@ -43,6 +43,8 @@ To migrate a single token to a new bridge, follow the steps below:
 3. Wait a few days to give a chance for any failed L1 to L2 transfer to be retried.
 4. Execute an L2 spell to unregister the token on `L2TokenGateway`, removing the ability to initiate new L2 to L1 transfers for that token.
 
+Note that step 3 is required because unregistering the token on `L2TokenGateway` not only removes the ability to initiate new L2 to L1 transfers but also causes the finalization of pending L1 to L2 transfers to revert. This is a point of difference with the implementation of the Arbitrum generic-custom gateway, where a missing L2 token triggers a withdrawal of the tokens back to L1 instead of a revert.
+
 ## Deployment
 
 ### Declare env variables
