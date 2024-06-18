@@ -233,8 +233,6 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         uint256 amount,
         bytes calldata /* data */
     ) external payable onlyCounterpartGateway {
-        require(l1Token != address(0), "L1TokenGateway/invalid-token");
-
         TokenLike(l1Token).transferFrom(escrow, to, amount);
 
         emit WithdrawalFinalized(l1Token, from, to, 0, amount);

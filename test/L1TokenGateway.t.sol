@@ -173,9 +173,6 @@ contract L1TokenGatewayTest is DssTest {
         vm.prank(address(bridge)); gateway.finalizeInboundTransfer(address(l1Token), address(0xb0b), address(0xced), 1 ether, "");
 
         OutboxMock(bridge.activeOutbox()).setL2ToL1Sender(counterpartGateway);
-        vm.expectRevert("L1TokenGateway/invalid-token");
-        vm.prank(address(bridge)); gateway.finalizeInboundTransfer(address(0), address(0xb0b), address(0xced), 1 ether, "");
-
         deal(address(l1Token), escrow, 100 ether, true);
 
         vm.expectEmit(true, true, true, true);
