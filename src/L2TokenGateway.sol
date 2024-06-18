@@ -121,10 +121,10 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
     }
 
     /**
-     * @notice Initiates a token withdrawal from Arbitrum to Ethereum
-     * @param l1Token l1 address of token
-     * @param to destination address
-     * @param amount amount of tokens withdrawn
+     * @notice Initiates a token withdrawal from L2 to L1
+     * @param l1Token address of the withdrawn token on L1
+     * @param to account to credit with the tokens on L1
+     * @param amount amount of tokens to withdraw
      * @return res encoded unique identifier for withdrawal
      */
     function outboundTransfer(
@@ -189,12 +189,12 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
     // --- inbound transfers ---
 
      /**
-     * @notice Mint on L2 upon L1 deposit.
+     * @notice Finalizes a token deposit from L1 to L2
      * @dev Callable only by the L1TokenGateway.outboundTransferCustomRefund method.
-     * @param l1Token L1 address of ERC20
-     * @param from account that initiated the deposit in the L1
-     * @param to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
-     * @param amount token amount to be minted to the user
+     * @param l1Token address of the deposited token on L1
+     * @param from account that initiated the deposit on L1
+     * @param to account to credit with the tokens on L2
+     * @param amount amount of tokens to deposit
      */
     function finalizeInboundTransfer(
         address l1Token,

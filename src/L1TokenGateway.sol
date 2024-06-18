@@ -131,6 +131,17 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         res = outboundTransferCustomRefund(l1Token, to, to, amount, maxGas, gasPriceBid, data);
     }
 
+    /**
+     * @notice Initiates a token deposit from L1 to L2
+     * @param l1Token address of the deposited token on L1
+     * @param refundTo account to be credited with the excess gas refund on L2
+     * @param to account to be credited with the tokens on L2
+     * @param amount amount of tokens to deposit
+     * @param maxGas Max gas to cover L2 execution
+     * @param gasPriceBid Gas price for L2 execution
+     * @param data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
     function outboundTransferCustomRefund(
         address l1Token,
         address refundTo,
@@ -220,11 +231,12 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
     // --- inbound transfers ---
 
     /**
-     * @notice Finalizes a withdrawal via Outbox message; callable only by L2Gateway.outboundTransfer
-     * @param l1Token L1 address of token being withdrawn from
-     * @param from initiator of withdrawal
-     * @param to address the L2 withdrawal call set as the destination.
-     * @param amount Token amount being withdrawn
+     * @notice Finalizes a token withdrawal from L2 to L1
+     * @dev Callable only by the L2TokenGateway.outboundTransfer method.
+     * @param l1Token address of the withdrawn token on L1
+     * @param from account that initiated the withdrawal on L2
+     * @param to account to credit with the tokens on L1
+     * @param amount amount of tokens to withdraw
      */
     function finalizeInboundTransfer(
         address l1Token,
