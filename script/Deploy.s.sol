@@ -104,9 +104,11 @@ contract Deploy is Script {
             if (l1Domain.hasConfigKey("tokens")) {
                 l1Tokens = l1Domain.readConfigAddresses("tokens");
             } else {
-                l1Tokens = new address[](2);
-                l1Tokens[0] = address(new GemMock(1_000_000_000 ether));
-                l1Tokens[1] = address(new GemMock(1_000_000_000 ether));
+                uint256 count = l2Domain.hasConfigKey("tokens") ? l2Domain.readConfigAddresses("tokens").length : 2;
+                l1Tokens = new address[](count);
+                for (uint256 i; i < count; ++i) {
+                    l1Tokens[i] = address(new GemMock(1_000_000_000 ether));
+                }
             }
 
             chainlog.setAddress("ARBITRUM_GOV_RELAY", l1GovRelay);
@@ -120,13 +122,13 @@ contract Deploy is Script {
             if (l2Domain.hasConfigKey("tokens")) {
                 l2Tokens = l2Domain.readConfigAddresses("tokens");
             } else {
-                l2Tokens = new address[](2);
-                l2Tokens[0] = address(new GemMock(0));
-                l2Tokens[1] = address(new GemMock(0));
-                GemMock(l2Tokens[0]).rely(l2GovRelay);
-                GemMock(l2Tokens[1]).rely(l2GovRelay);
-                GemMock(l2Tokens[0]).deny(deployer);
-                GemMock(l2Tokens[1]).deny(deployer);
+                uint256 count = l1Domain.hasConfigKey("tokens") ? l1Domain.readConfigAddresses("tokens").length : 2;
+                l2Tokens = new address[](count);
+                for (uint256 i; i < count; ++i) {
+                    l2Tokens[i] = address(new GemMock(0));
+                    GemMock(l2Tokens[i]).rely(l2GovRelay);
+                    GemMock(l2Tokens[i]).deny(deployer);
+                }
             }
             vm.stopBroadcast();
         }
