@@ -12,7 +12,7 @@ The Arbitrum Token Bridge is a [custom Arbitrum bridge](https://docs.arbitrum.io
 ### External dependencies
 
 - The L2 implementations of the bridged tokens are not provided as part of this repository and are assumed to exist in external repositories.
-- The [escrow contract](<(https://etherscan.io/address/0xA10c7CE4b876998858b1a9E12b10092229539400#code)>) holds the bridged tokens on L1. This is assumed to be the same escrow as the one used by the Arbitrum Dai Bridge.
+- The [escrow contract](https://etherscan.io/address/0xA10c7CE4b876998858b1a9E12b10092229539400#code) holds the bridged tokens on L1. This is assumed to be the same escrow as the one used by the Arbitrum Dai Bridge.
 - The [`L1GovernanceRelay`](https://etherscan.io/address/0x9ba25c289e351779E0D481Ba37489317c34A899d#code) & [`L2GovernanceRelay`](https://arbiscan.io/address/0x10E6593CDda8c58a1d0f14C5164B376352a55f2F#code) allow governance to exert admin control over the deployed L2 contracts. These contracts have been previously deployed to control the Arbitrum Dai Bridge.
 
 ## User flows
