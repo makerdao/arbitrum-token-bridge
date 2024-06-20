@@ -151,11 +151,6 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         uint256 gasPriceBid,
         bytes calldata data
     ) public payable returns (bytes memory res) {
-
-        // TODO: should we only allow call from router as per https://docs.arbitrum.io/build-decentralized-apps/token-bridging/bridge-tokens-programmatically/how-to-bridge-tokens-custom-gateway
-        // Only allow calls from the router
-        // require(msg.sender == router, "Call not received from router");
-
         require(isOpen == 1, "L1TokenGateway/closed"); // do not allow initiating new xchain messages if bridge is closed
         require(l1ToL2Token[l1Token] != address(0), "L1TokenGateway/invalid-token");
         address from;
