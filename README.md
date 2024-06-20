@@ -19,7 +19,7 @@ The Arbitrum Token Bridge is a [custom Arbitrum bridge](https://docs.arbitrum.io
 
 ### L1 to L2 deposits
 
-To deposit a given amount of a supported token into Arbitrum, Alice calls `outboundTransfer[CustomRefund]()` on the `L1TokenGateway`. This call locks Alice's tokens into an escrow contract and creates an [Arbitrum Retryable Tickets](https://docs.arbitrum.io/how-arbitrum-works/arbos/l1-l2-messaging#retryable-tickets) which instructs the Arbitrum sequencer to asynchroneously call `finalizeInboundTransfer()` on `L2TokenGateway`. That latter call mints an equivalent amount of L2 tokens for Alice.
+To deposit a given amount of a supported token into Arbitrum, Alice calls `outboundTransfer[CustomRefund]()` on the `L1TokenGateway`. This call locks Alice's tokens into an escrow contract and creates an [Arbitrum Retryable Ticket](https://docs.arbitrum.io/how-arbitrum-works/arbos/l1-l2-messaging#retryable-tickets) which instructs the Arbitrum sequencer to asynchroneously call `finalizeInboundTransfer()` on `L2TokenGateway`. That latter call mints an equivalent amount of L2 tokens for Alice.
 
 Note that the `outboundTransfer[CustomRefund]` payable function requires a number of gas parameters to be provided, and must be called with some corresponding amount of ETH as `msg.value`. An example of how to calculate these parameters is provided in `script/Deposit.s.sol`.
 
