@@ -85,7 +85,7 @@ library TokenGatewayInit {
         // but makes the eth balance requirement more explicit
         require(address(l1GovRelay).balance >= l1CallValue, "TokenGatewayInit/insufficient-relay-balance");
 
-        for(uint256 i; i < cfg.l1Tokens.length; ++i) {
+        for (uint256 i; i < cfg.l1Tokens.length; ++i) {
             (address l1Token, address l2Token) = (cfg.l1Tokens[i], cfg.l2Tokens[i]);
             require(l1Token != address(0), "TokenGatewayInit/invalid-l1-token");
             require(l2Token != address(0), "TokenGatewayInit/invalid-l2-token");
