@@ -28,10 +28,6 @@ import { L2TokenGatewaySpell } from "deploy/L2TokenGatewaySpell.sol";
 import { L2GovernanceRelay } from "deploy/mocks/L2GovernanceRelay.sol";
 import { RetryableTickets } from "script/utils/RetryableTickets.sol";
 
-interface InboxLike {
-    function calculateRetryableSubmissionFee(uint256,uint256) external view returns (uint256);
-}
-
 contract Init is Script {
     using stdJson for string;
 
