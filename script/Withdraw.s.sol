@@ -47,7 +47,7 @@ contract Withdraw is Script {
         Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
         l1Domain.selectFork();
 
-        // Note that ArbitrumDomain is required for l2Domain (instead of Domain) in order to override the custom OpCodes used in ArbSys
+        // Note that l2Domain must be an ArbitrumDomain (instead of a Domain) so that ArbSys is overwritten with a dummy contract that doesn't use custom Arbitrum OpCodes
         ArbitrumDomain l2Domain = new ArbitrumDomain(config, getChain(vm.envOr("L2", string("arbitrum_one"))), l1Domain);
         l2Domain.selectFork();
 
