@@ -152,6 +152,7 @@ contract IntegrationTest is DssTest {
 
         // test L2 side of initGateways
         assertEq(l2Gateway.l1ToL2Token(address(l1Token)), address(l2Token));
+        assertEq(l2Token.wards(address(l2Gateway)), 1);
 
         // Register L1 & L2 gateways in L1 & L2 routers
         l1Domain.selectFork();
