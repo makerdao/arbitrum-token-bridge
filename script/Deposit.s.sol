@@ -50,11 +50,13 @@ contract Deposit is Script {
     using stdJson for string;
 
     function run() external {
-        string memory config = ScriptTools.readInput("config"); // loads from FOUNDRY_SCRIPT_CONFIG
-        string memory deps = ScriptTools.loadDependencies(); // loads from FOUNDRY_SCRIPT_DEPS
-        
-        Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
-        Domain l2Domain = new Domain(config, getChain(vm.envOr("L2", string("arbitrum_one"))));
+        StdChains.Chain memory l1Chain = getChain(string(vm.envOr("L1", string("mainnet"))));
+        StdChains.Chain memory l2Chain = getChain(string(vm.envOr("L2", string("arbitrum_one"))));
+        vm.setEnv("FOUNDRY_ROOT_CHAINID", vm.toString(l1Chain.chainId)); // used by ScriptTools to determine config path
+        string memory config = ScriptTools.loadConfig("config");
+        string memory deps   = ScriptTools.loadDependencies();
+        Domain l1Domain = new Domain(config, l1Chain);
+        Domain l2Domain = new Domain(config, l2Chain);
         l1Domain.selectFork();
        
        (,address deployer, ) = vm.readCallers();

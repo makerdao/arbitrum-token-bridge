@@ -41,14 +41,17 @@ contract Withdraw is Script {
     using stdJson for string;
 
     function run() external {
-        string memory config = ScriptTools.readInput("config"); // loads from FOUNDRY_SCRIPT_CONFIG
-        string memory deps = ScriptTools.loadDependencies(); // loads from FOUNDRY_SCRIPT_DEPS
-        
-        Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
+        StdChains.Chain memory l1Chain = getChain(string(vm.envOr("L1", string("mainnet"))));
+        StdChains.Chain memory l2Chain = getChain(string(vm.envOr("L2", string("arbitrum_one"))));
+        vm.setEnv("FOUNDRY_ROOT_CHAINID", vm.toString(l1Chain.chainId)); // used by ScriptTools to determine config path
+        string memory config = ScriptTools.loadConfig("config");
+        string memory deps   = ScriptTools.loadDependencies();
+
+        Domain l1Domain = new Domain(config, l1Chain);
         l1Domain.selectFork();
 
         // Note that l2Domain must be an ArbitrumDomain (instead of a Domain) so that ArbSys is overwritten with a dummy contract that doesn't use custom Arbitrum OpCodes
-        ArbitrumDomain l2Domain = new ArbitrumDomain(config, getChain(vm.envOr("L2", string("arbitrum_one"))), l1Domain);
+        ArbitrumDomain l2Domain = new ArbitrumDomain(config, l2Chain, l1Domain);
         l2Domain.selectFork();
 
        (,address deployer, ) = vm.readCallers();

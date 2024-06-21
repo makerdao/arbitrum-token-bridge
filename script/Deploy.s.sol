@@ -60,10 +60,12 @@ contract Deploy is Script {
     address constant LOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
 
     function run() external {
-        string memory config = ScriptTools.readInput("config");
-
-        Domain l1Domain = new Domain(config, getChain(string(vm.envOr("L1", string("mainnet")))));
-        Domain l2Domain = new Domain(config, getChain(vm.envOr("L2", string("arbitrum_one"))));
+        StdChains.Chain memory l1Chain = getChain(string(vm.envOr("L1", string("mainnet"))));
+        StdChains.Chain memory l2Chain = getChain(string(vm.envOr("L2", string("arbitrum_one"))));
+        vm.setEnv("FOUNDRY_ROOT_CHAINID", vm.toString(l1Chain.chainId)); // used by ScriptTools to determine config path
+        string memory config = ScriptTools.loadConfig("config");
+        Domain l1Domain = new Domain(config, l1Chain);
+        Domain l2Domain = new Domain(config, l2Chain);
         l1Domain.selectFork();
 
         (,address deployer, ) = vm.readCallers();
