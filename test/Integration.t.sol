@@ -156,7 +156,7 @@ contract IntegrationTest is DssTest {
         // Register L1 & L2 gateways in L1 & L2 routers
         l1Domain.selectFork();
         address[] memory l1Gateways = new address[](1);
-        l1Gateways[0] = address(address(l1Gateway));
+        l1Gateways[0] = address(l1Gateway);
         address routerOwner = L1RouterLike(L1_ROUTER).owner();
         uint256 maxSubmissionCost = 0.1 ether;
         uint256 maxGas = 1_000_000;
