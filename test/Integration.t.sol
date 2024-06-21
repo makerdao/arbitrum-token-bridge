@@ -67,7 +67,8 @@ contract IntegrationTest is DssTest {
     address L2_ROUTER;
 
     function setUp() public {
-        string memory config = ScriptTools.readInput("config");
+        vm.setEnv("FOUNDRY_ROOT_CHAINID", "1"); // used by ScriptTools to determine config path
+        string memory config = ScriptTools.loadConfig("config");
 
         l1Domain = new Domain(config, getChain("mainnet"));
         l1Domain.selectFork();
