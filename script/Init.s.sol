@@ -58,6 +58,7 @@ contract Init is Script {
         bytes memory initCalldata = abi.encodeCall(L2GovernanceRelay.relay, (
             deps.readAddress(".l2GatewaySpell"), 
             abi.encodeCall(L2TokenGatewaySpell.init, (
+                cfg.counterpartGateway,
                 l1Gateway,
                 deps.readAddress(".l2Router"),
                 cfg.l1Tokens,

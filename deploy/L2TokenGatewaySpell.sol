@@ -51,12 +51,14 @@ contract L2TokenGatewaySpell {
     }
     
     function init(
+        address l2Gateway_,
         address counterpartGateway,
         address l2Router,
         address[] calldata l1Tokens,
         address[] calldata l2Tokens
     ) external {
         // sanity checks
+        require(address(l2Gateway) == l2Gateway_, "L2TokenGatewaySpell/l2-gateway-mismatch");
         require(l2Gateway.isOpen() == 1, "L2TokenGatewaySpell/not-open");
         require(l2Gateway.counterpartGateway() == counterpartGateway, "L2TokenGatewaySpell/counterpart-gateway-mismatch");
         require(l2Gateway.l2Router() == l2Router, "L2TokenGatewaySpell/l2-router-mismatch");

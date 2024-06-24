@@ -103,6 +103,7 @@ library TokenGatewayInit {
         l1GovRelay.relay({
             target:            l2GatewayInstance.spell,
             targetData:        abi.encodeCall(L2TokenGatewaySpell.init, (
+                l2GatewayInstance.gateway,
                 l1Gateway_,
                 l1Router.counterpartGateway(),
                 cfg.l1Tokens,
