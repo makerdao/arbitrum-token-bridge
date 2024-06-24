@@ -45,6 +45,10 @@ interface EscrowLike {
     function approve(address, address, uint256) external;
 }
 
+interface L1RouterLike {
+    function counterpartGateway() external view returns (address);
+}
+
 struct MessageParams {
     uint256 maxGas;
     uint256 gasPriceBid;
@@ -70,6 +74,7 @@ library TokenGatewayInit {
         L1TokenGatewayLike l1Gateway = L1TokenGatewayLike(l1Gateway_);
         L1RelayLike       l1GovRelay = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY"));
         EscrowLike            escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
+        L1RouterLike        l1Router = L1RouterLike(cfg.l1Router);
 
         // sanity checks
         require(l1Gateway.isOpen() == 1, "TokenGatewayInit/not-open");
@@ -97,7 +102,12 @@ library TokenGatewayInit {
 
         l1GovRelay.relay({
             target:            l2GatewayInstance.spell,
-            targetData:        abi.encodeCall(L2TokenGatewaySpell.registerTokens, (cfg.l1Tokens, cfg.l2Tokens)),
+            targetData:        abi.encodeCall(L2TokenGatewaySpell.init, (
+                l1Gateway_,
+                l1Router.counterpartGateway(),
+                cfg.l1Tokens,
+                cfg.l2Tokens
+            )),
             l1CallValue:       l1CallValue,
             maxGas:            cfg.xchainMsg.maxGas,
             gasPriceBid:       cfg.xchainMsg.gasPriceBid,

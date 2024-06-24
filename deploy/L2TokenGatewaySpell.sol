@@ -17,6 +17,9 @@
 pragma solidity >=0.8.0;
 
 interface L2TokenGatewayLike {
+    function isOpen() external view returns (uint256);
+    function counterpartGateway() external view returns (address);
+    function l2Router() external view returns (address);
     function rely(address) external;
     function deny(address) external;
     function close() external;
@@ -38,11 +41,25 @@ contract L2TokenGatewaySpell {
     function rely(address usr) external { l2Gateway.rely(usr); }
     function deny(address usr) external { l2Gateway.deny(usr); }
     function close() external { l2Gateway.close(); }
+
+    function registerToken(address l1Token, address l2Token) public { 
+        l2Gateway.registerToken(l1Token, l2Token);
+        AuthLike(l2Token).rely(address(l2Gateway));
+    }
     
-    function registerTokens(address[] calldata l1Tokens, address[] calldata l2Tokens) external { 
+    function init(
+        address counterpartGateway,
+        address l2Router,
+        address[] calldata l1Tokens,
+        address[] calldata l2Tokens
+    ) external {
+        // sanity checks
+        require(l2Gateway.isOpen() == 1, "L2TokenGatewaySpell/not-open");
+        require(l2Gateway.counterpartGateway() == counterpartGateway, "L2TokenGatewaySpell/counterpart-gateway-mismatch");
+        require(l2Gateway.l2Router() == l2Router, "L2TokenGatewaySpell/l2-router-mismatch");
+
         for (uint256 i; i < l2Tokens.length;) {
-            l2Gateway.registerToken(l1Tokens[i], l2Tokens[i]);
-            AuthLike(l2Tokens[i]).rely(address(l2Gateway));
+            registerToken(l1Tokens[i], l2Tokens[i]);
             unchecked { ++i; }
         }
     }
