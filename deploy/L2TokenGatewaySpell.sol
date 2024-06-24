@@ -42,9 +42,12 @@ contract L2TokenGatewaySpell {
     function deny(address usr) external { l2Gateway.deny(usr); }
     function close() external { l2Gateway.close(); }
 
-    function registerToken(address l1Token, address l2Token) public { 
-        l2Gateway.registerToken(l1Token, l2Token);
-        AuthLike(l2Token).rely(address(l2Gateway));
+    function registerTokens(address[] memory l1Tokens, address[] memory l2Tokens) public { 
+        for (uint256 i; i < l2Tokens.length;) {
+            l2Gateway.registerToken(l1Tokens[i], l2Tokens[i]);
+            AuthLike(l2Tokens[i]).rely(address(l2Gateway));
+            unchecked { ++i; }
+        }
     }
     
     function init(
@@ -58,9 +61,6 @@ contract L2TokenGatewaySpell {
         require(l2Gateway.counterpartGateway() == counterpartGateway, "L2TokenGatewaySpell/counterpart-gateway-mismatch");
         require(l2Gateway.l2Router() == l2Router, "L2TokenGatewaySpell/l2-router-mismatch");
 
-        for (uint256 i; i < l2Tokens.length;) {
-            registerToken(l1Tokens[i], l2Tokens[i]);
-            unchecked { ++i; }
-        }
+        registerTokens(l1Tokens, l2Tokens);
     }
 }
