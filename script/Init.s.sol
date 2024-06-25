@@ -47,6 +47,7 @@ contract Init is Script {
         address l2GovRelay = deps.readAddress(".l2GovRelay");
         RetryableTickets retryable = new RetryableTickets(l1Domain, l2Domain, l1GovRelay, l2GovRelay);
 
+        address l1Gateway = deps.readAddress(".l1Gateway");
         GatewaysConfig memory cfg; 
         cfg.counterpartGateway = deps.readAddress(".l2Gateway");
         cfg.l1Router = deps.readAddress(".l1Router");
@@ -54,14 +55,20 @@ contract Init is Script {
         cfg.l1Tokens = deps.readAddressArray(".l1Tokens");
         cfg.l2Tokens = deps.readAddressArray(".l2Tokens");
 
-        bytes memory registerTokensCalldata = abi.encodeCall(L2GovernanceRelay.relay, (
+        bytes memory initCalldata = abi.encodeCall(L2GovernanceRelay.relay, (
             deps.readAddress(".l2GatewaySpell"), 
-            abi.encodeCall(L2TokenGatewaySpell.registerTokens, (cfg.l1Tokens, cfg.l2Tokens))
+            abi.encodeCall(L2TokenGatewaySpell.init, (
+                cfg.counterpartGateway,
+                l1Gateway,
+                deps.readAddress(".l2Router"),
+                cfg.l1Tokens,
+                cfg.l2Tokens
+            ))
         ));
         cfg.xchainMsg = MessageParams({
-            maxGas:            retryable.getMaxGas(registerTokensCalldata) * 150 / 100,
+            maxGas:            retryable.getMaxGas(initCalldata) * 150 / 100,
             gasPriceBid:       retryable.getGasPriceBid() * 200 / 100,
-            maxSubmissionCost: retryable.getSubmissionFee(registerTokensCalldata) * 250 / 100
+            maxSubmissionCost: retryable.getSubmissionFee(initCalldata) * 250 / 100
         });
 
         L2TokenGatewayInstance memory l2GatewayInstance = L2TokenGatewayInstance({
@@ -76,7 +83,7 @@ contract Init is Script {
             require(success, "l1GovRelay topup failed");
         }
 
-        TokenGatewayInit.initGateways(dss, deps.readAddress(".l1Gateway"), l2GatewayInstance, cfg);
+        TokenGatewayInit.initGateways(dss, l1Gateway, l2GatewayInstance, cfg);
         vm.stopBroadcast();
     }
 }
