@@ -190,8 +190,7 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         uint256 amount,
         bytes memory data
     ) public pure returns (bytes memory outboundCalldata) {
-        outboundCalldata = abi.encodeCall(
-            ITokenGateway.finalizeInboundTransfer, (
+        outboundCalldata = abi.encodeCall(ITokenGateway.finalizeInboundTransfer, (
             l1Token,
             from,
             to,
