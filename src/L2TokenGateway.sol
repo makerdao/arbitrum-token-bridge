@@ -163,14 +163,14 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         uint256 amount,
         bytes memory data
     ) public pure returns (bytes memory outboundCalldata) {
-        outboundCalldata = abi.encodeWithSelector(
-            ITokenGateway.finalizeInboundTransfer.selector,
+        outboundCalldata = abi.encodeCall(
+            ITokenGateway.finalizeInboundTransfer, (
             token,
             from,
             to,
             amount,
             abi.encode(0, data) // using 0 for exitNum as exit redirection is not supported
-        );
+        ));
     }
 
     function createOutboundTx(
