@@ -1,0 +1,10 @@
+{
+  "domains": {
+    "sepolia": {},
+    "arbitrum_one_sepolia": {
+      "inbox": "0xaAe29B0366299461418F5324a79Afc425BE5ae21",
+      "l1Router": "0xcE18836b233C83325Cc8848CA4487e94C6288264",
+      "arbSys": "0x0000000000000000000000000000000000000064"
+    }
+  }
+}
