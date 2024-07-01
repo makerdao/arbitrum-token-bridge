@@ -134,8 +134,10 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
     /**
      * @notice Initiates a token deposit from L1 to L2
      * @param l1Token address of the deposited token on L1
-     * @param refundTo account to be credited with the excess gas refund on L2
-     * @param to account to be credited with the tokens on L2
+     * @param refundTo account to be credited with the excess gas refund on L2. Note that the 
+     * refund will be credited to the L2 alias of `refundTo` if `refundTo` has code in L1
+     * @param to account to be credited with the tokens on L2. Note that the tokens will be credited to
+     * `to` (and not its L2 alias) even if `to` has code in L1.
      * @param amount amount of tokens to deposit
      * @param maxGas Max gas to cover L2 execution
      * @param gasPriceBid Gas price for L2 execution
@@ -188,14 +190,13 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         uint256 amount,
         bytes memory data
     ) public pure returns (bytes memory outboundCalldata) {
-        outboundCalldata = abi.encodeWithSelector(
-            ITokenGateway.finalizeInboundTransfer.selector,
+        outboundCalldata = abi.encodeCall(ITokenGateway.finalizeInboundTransfer, (
             l1Token,
             from,
             to,
             amount,
             abi.encode("", data)
-        );
+        ));
     }
 
     function createOutboundTxCustomRefund(
@@ -207,20 +208,18 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
         bytes memory outboundCalldata
     ) internal returns (uint256) {
         return
-            sendTxToL2CustomRefund(
-                inbox,
-                counterpartGateway,
-                refundTo,
-                from,
-                msg.value, // we forward the L1 call value to the inbox
-                0, // l2 call value is 0
-                L2GasParams({
-                    _maxSubmissionCost: maxSubmissionCost,
-                    _maxGas: maxGas,
-                    _gasPriceBid: gasPriceBid
-                }),
-                outboundCalldata
-            );
+            sendTxToL2CustomRefund({
+                _inbox: inbox,
+                _to: counterpartGateway,
+                _refundTo: refundTo,
+                _user: from,
+                _l1CallValue: msg.value, // we forward the L1 call value to the inbox
+                _l2CallValue: 0,
+                _maxSubmissionCost: maxSubmissionCost,
+                _maxGas: maxGas,
+                _gasPriceBid: gasPriceBid,
+                _data: outboundCalldata
+            });
     }
 
     // --- inbound transfers ---
