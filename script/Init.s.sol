@@ -49,7 +49,6 @@ contract Init is Script {
 
         address l1Gateway = deps.readAddress(".l1Gateway");
         GatewaysConfig memory cfg; 
-        cfg.counterpartGateway = deps.readAddress(".l2Gateway");
         cfg.l1Router = deps.readAddress(".l1Router");
         cfg.inbox = deps.readAddress(".inbox");
         cfg.l1Tokens = deps.readAddressArray(".l1Tokens");
@@ -58,7 +57,7 @@ contract Init is Script {
         bytes memory initCalldata = abi.encodeCall(L2GovernanceRelay.relay, (
             deps.readAddress(".l2GatewaySpell"), 
             abi.encodeCall(L2TokenGatewaySpell.init, (
-                cfg.counterpartGateway,
+                deps.readAddress(".l2Gateway"),
                 l1Gateway,
                 deps.readAddress(".l2Router"),
                 cfg.l1Tokens,
