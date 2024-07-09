@@ -56,7 +56,6 @@ struct MessageParams {
 }
 
 struct GatewaysConfig {
-    address counterpartGateway;
     address l1Router;
     address inbox;
     address[] l1Tokens;
@@ -78,7 +77,7 @@ library TokenGatewayInit {
 
         // sanity checks
         require(l1Gateway.isOpen() == 1, "TokenGatewayInit/not-open");
-        require(l1Gateway.counterpartGateway() == cfg.counterpartGateway, "TokenGatewayInit/counterpart-gateway-mismatch");
+        require(l1Gateway.counterpartGateway() == l2GatewayInstance.gateway, "TokenGatewayInit/counterpart-gateway-mismatch");
         require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/l1-router-mismatch");
         require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/inbox-mismatch");
         require(l1Gateway.escrow() == address(escrow), "TokenGatewayInit/incorrect-escrow");
