@@ -49,7 +49,7 @@ Note that step 3 is required because unregistering the token on `L2TokenGateway`
 
 ### Declare env variables
 
-Add the required env variables listed in `.env.example` to your `.env` file, and run `source .env`.
+Add the required env variables listed in `.env.example` to your `.env` file, and run `set -a && source .env`.
 
 Make sure to set the `L1` and `L2` env variables according to your desired deployment environment.
 
