@@ -71,10 +71,16 @@ L2=arbitrum_one_sepolia
 
 Deploy the L1 and L2 tokens (not included in this repo) that must be supported by the bridge then fill in the addresses of these tokens in `script/input/{chainId}/config.json` as two arrays of address strings under the `tokens` key for both the L1 and L2 domains. On testnet, if the `tokens` key is missing for a domain, mock tokens will automatically be deployed for that domain.
 
-The following command deploys the L1 and L2 sides of the bridge:
+Start by deploying the L1 side of the bridge:
 
 ```
-forge script script/Deploy.s.sol:Deploy --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --verify --multi --broadcast
+forge script script/DeployL1.s.sol:DeployL1 --sender $L1_DEPLOYER --private-key $L1_PRIVATE_KEY --slow --verify --multi --broadcast
+```
+
+Next, deploy the L2 side of the bridge:
+
+```
+forge script script/DeployL2.s.sol:DeployL2 --sender $L2_DEPLOYER --private-key $L2_PRIVATE_KEY --slow --verify --multi --broadcast
 ```
 
 ### Initialize the bridge
@@ -82,7 +88,7 @@ forge script script/Deploy.s.sol:Deploy --sender $DEPLOYER --private-key $PRIVAT
 On mainnet, the bridge should be initialized via the spell process. On testnet, the bridge initialization can be performed via the following command:
 
 ```
-forge script script/Init.s.sol:Init --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --multi --broadcast
+forge script script/Init.s.sol:Init --sender $L1_DEPLOYER --private-key $L1_PRIVATE_KEY --slow --multi --broadcast
 ```
 
 ### Test the deployment
@@ -90,13 +96,13 @@ forge script script/Init.s.sol:Init --sender $DEPLOYER --private-key $PRIVATE_KE
 Make sure the deployer account holds at least 10^18 units of the first token listed under `"l1Tokens"` in `script/output/{chainId}/deployed-latest.json`. To perform a test deposit of that token, use the following command:
 
 ```
-forge script script/Deposit.s.sol:Deposit --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --multi --broadcast
+forge script script/Deposit.s.sol:Deposit --sender $L1_DEPLOYER --private-key $L1_PRIVATE_KEY --slow --multi --broadcast
 ```
 
 To subsequently perform a test withdrawal, use the following command:
 
 ```
-forge script script/Withdraw.s.sol:Withdraw --sender $DEPLOYER --private-key $PRIVATE_KEY --slow --multi --broadcast --skip-simulation
+forge script script/Withdraw.s.sol:Withdraw --sender $L2_DEPLOYER --private-key $L2_PRIVATE_KEY --slow --multi --broadcast --skip-simulation
 ```
 
 Note that the `--skip-simulation` flag is required due to usage of custom Arb OpCodes in ArbSys.
