@@ -40,6 +40,10 @@ interface GatewayLike {
 contract Withdraw is Script {
     using stdJson for string;
 
+    uint256 l1PrivKey = vm.envUint("L1_PRIVATE_KEY");
+    uint256 l2PrivKey = vm.envUint("L2_PRIVATE_KEY");
+    address l1Deployer = vm.addr(l1PrivKey);
+
     function run() external {
         StdChains.Chain memory l1Chain = getChain(string(vm.envOr("L1", string("mainnet"))));
         StdChains.Chain memory l2Chain = getChain(string(vm.envOr("L2", string("arbitrum_one"))));
@@ -54,20 +58,19 @@ contract Withdraw is Script {
         ArbitrumDomain l2Domain = new ArbitrumDomain(config, l2Chain, l1Domain);
         l2Domain.selectFork();
 
-       (,address deployer, ) = vm.readCallers();
         address l2Gateway = deps.readAddress(".l2Gateway");
         address l1Token = deps.readAddressArray(".l1Tokens")[0];
         address l2Token = deps.readAddressArray(".l2Tokens")[0];
 
         uint256 amount = 0.01 ether;
 
-        vm.startBroadcast();
+        vm.startBroadcast(l2PrivKey);
         GemLike(l2Token).approve(l2Gateway, type(uint256).max);
 
         // Note that outboundTransfer can only succeed if --skip-simulation was used due to usage of custom Arb OpCodes in ArbSys
         GatewayLike(l2Gateway).outboundTransfer({
             l1Token: l1Token, 
-            to:      deployer, 
+            to:      l1Deployer, 
             amount:  amount, 
             data:    ""
         });

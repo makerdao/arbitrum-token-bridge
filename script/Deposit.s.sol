@@ -49,6 +49,11 @@ interface GatewayLike {
 contract Deposit is Script {
     using stdJson for string;
 
+    uint256 l1PrivKey = vm.envUint("L1_PRIVATE_KEY");
+    uint256 l2PrivKey = vm.envUint("L2_PRIVATE_KEY");
+    address l1Deployer = vm.addr(l1PrivKey);
+    address l2Deployer = vm.addr(l2PrivKey);
+
     function run() external {
         StdChains.Chain memory l1Chain = getChain(string(vm.envOr("L1", string("mainnet"))));
         StdChains.Chain memory l2Chain = getChain(string(vm.envOr("L2", string("arbitrum_one"))));
@@ -59,7 +64,6 @@ contract Deposit is Script {
         Domain l2Domain = new Domain(config, l2Chain);
         l1Domain.selectFork();
        
-       (,address deployer, ) = vm.readCallers();
         address l1Gateway = deps.readAddress(".l1Gateway");
         address l2Gateway = deps.readAddress(".l2Gateway");
         address l1Token = deps.readAddressArray(".l1Tokens")[0];
@@ -69,8 +73,8 @@ contract Deposit is Script {
         uint256 amount = 1 ether;
         bytes memory finalizeDepositCalldata = GatewayLike(l1Gateway).getOutboundCalldata({
             l1Token: l1Token, 
-            from:    deployer,
-            to:      deployer, 
+            from:    l1Deployer,
+            to:      l2Deployer, 
             amount:  amount,
             data:    ""
         });
@@ -79,11 +83,11 @@ contract Deposit is Script {
         uint256 maxSubmissionCost = retryable.getSubmissionFee(finalizeDepositCalldata) * 250 / 100;
         uint256 l1CallValue = maxSubmissionCost + maxGas * gasPriceBid;
 
-        vm.startBroadcast();
+        vm.startBroadcast(l1PrivKey);
         GemLike(l1Token).approve(l1Gateway, type(uint256).max);
         GatewayLike(l1Gateway).outboundTransfer{value: l1CallValue}({
             l1Token:     l1Token, 
-            to:          deployer, 
+            to:          l2Deployer, 
             amount:      amount, 
             maxGas:      maxGas, 
             gasPriceBid: gasPriceBid,

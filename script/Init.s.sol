@@ -31,6 +31,8 @@ import { RetryableTickets } from "script/utils/RetryableTickets.sol";
 contract Init is Script {
     using stdJson for string;
 
+    uint256 l1PrivKey = vm.envUint("L1_PRIVATE_KEY");
+
     function run() external {
         StdChains.Chain memory l1Chain = getChain(string(vm.envOr("L1", string("mainnet"))));
         StdChains.Chain memory l2Chain = getChain(string(vm.envOr("L2", string("arbitrum_one"))));
@@ -75,7 +77,7 @@ contract Init is Script {
             gateway: deps.readAddress(".l2Gateway")
         });
 
-        vm.startBroadcast();
+        vm.startBroadcast(l1PrivKey);
         uint256 minGovRelayBal = cfg.xchainMsg.maxSubmissionCost + cfg.xchainMsg.maxGas * cfg.xchainMsg.gasPriceBid;
         if (l1GovRelay.balance < minGovRelayBal) {
             (bool success,) = l1GovRelay.call{value: minGovRelayBal - l1GovRelay.balance}("");
