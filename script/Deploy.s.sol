@@ -59,6 +59,11 @@ contract Deploy is Script {
 
     address constant LOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
 
+    uint256 l1PrivKey = vm.envUint("L1_PRIVATE_KEY");
+    uint256 l2PrivKey = vm.envUint("L2_PRIVATE_KEY");
+    address l1Deployer = vm.addr(l1PrivKey);
+    address l2Deployer = vm.addr(l2PrivKey);
+
     function run() external {
         StdChains.Chain memory l1Chain = getChain(string(vm.envOr("L1", string("mainnet"))));
         StdChains.Chain memory l2Chain = getChain(string(vm.envOr("L2", string("arbitrum_one"))));
@@ -68,7 +73,6 @@ contract Deploy is Script {
         Domain l2Domain = new Domain(config, l2Chain);
         l1Domain.selectFork();
 
-        (,address deployer, ) = vm.readCallers();
         address l1Router = l2Domain.readConfigAddress("l1Router");
         address inbox = l2Domain.readConfigAddress("inbox");
 
@@ -89,18 +93,18 @@ contract Deploy is Script {
             l2Tokens = l2Domain.readConfigAddresses("tokens");
             l2GovRelay = L1GovernanceRelay(payable(l1GovRelay)).l2GovernanceRelay();
         } else {
-            owner = deployer;
-            vm.startBroadcast();
+            owner = l1Deployer;
+            vm.startBroadcast(l1PrivKey);
             chainlog = new ChainLog();
             escrow = address(new L1Escrow());
             chainlog.setAddress("ARBITRUM_ESCROW", escrow);
             vm.stopBroadcast();
 
             l2Domain.selectFork();
-            address l2GovRelay_ = vm.computeCreateAddress(deployer, vm.getNonce(deployer));
+            address l2GovRelay_ = vm.computeCreateAddress(l2Deployer, vm.getNonce(l2Deployer));
 
             l1Domain.selectFork();
-            vm.startBroadcast();
+            vm.startBroadcast(l1PrivKey);
             l1GovRelay = address(new L1GovernanceRelay(inbox, l2GovRelay_));
 
             if (l1Domain.hasConfigKey("tokens")) {
@@ -117,7 +121,7 @@ contract Deploy is Script {
             vm.stopBroadcast();
 
             l2Domain.selectFork();
-            vm.startBroadcast();
+            vm.startBroadcast(l2PrivKey);
             l2GovRelay = address(new L2GovernanceRelay(l1GovRelay));
             require(l2GovRelay == l2GovRelay_, "l2GovRelay address mismatch");
 
@@ -129,7 +133,7 @@ contract Deploy is Script {
                 for (uint256 i; i < count; ++i) {
                     l2Tokens[i] = address(new GemMock(0));
                     GemMock(l2Tokens[i]).rely(l2GovRelay);
-                    GemMock(l2Tokens[i]).deny(deployer);
+                    GemMock(l2Tokens[i]).deny(l2Deployer);
                 }
             }
             vm.stopBroadcast();
@@ -138,19 +142,19 @@ contract Deploy is Script {
         // L1 deployment
 
         l2Domain.selectFork();
-        address l2Gateway = vm.computeCreateAddress(deployer, vm.getNonce(deployer));
+        address l2Gateway = vm.computeCreateAddress(l2Deployer, vm.getNonce(l2Deployer));
 
         l1Domain.selectFork();
-        vm.startBroadcast();
-        address l1Gateway = TokenGatewayDeploy.deployL1Gateway(deployer, owner, l2Gateway, l1Router, inbox, escrow);
+        vm.startBroadcast(l1PrivKey);
+        address l1Gateway = TokenGatewayDeploy.deployL1Gateway(l1Deployer, owner, l2Gateway, l1Router, inbox, escrow);
         vm.stopBroadcast();
         address l2Router = L1RouterLike(l1Router).counterpartGateway();
 
         // L2 deployment
 
         l2Domain.selectFork();
-        vm.startBroadcast();
-        L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway(deployer, l2GovRelay, l1Gateway, l2Router);
+        vm.startBroadcast(l2PrivKey);
+        L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway(l2Deployer, l2GovRelay, l1Gateway, l2Router);
         require(l2GatewayInstance.gateway == l2Gateway, "l2Gateway address mismatch");
         vm.stopBroadcast();
 
