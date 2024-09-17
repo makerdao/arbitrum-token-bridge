@@ -106,8 +106,7 @@ contract IntegrationTest is DssTest {
             owner:     PAUSE_PROXY,
             l2Gateway: address(l2Gateway), 
             l1Router:  L1_ROUTER,
-            inbox:     INBOX,
-            escrow:    ESCROW
+            inbox:     INBOX
         }));
         assertEq(address(l1Gateway), l1Gateway_);
 

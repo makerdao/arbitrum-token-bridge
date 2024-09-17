@@ -29,10 +29,9 @@ library TokenGatewayDeploy {
         address owner,
         address l2Gateway,
         address l1Router,
-        address inbox,
-        address escrow
+        address inbox
     ) internal returns (address l1Gateway) {
-        l1Gateway = address(new L1TokenGateway(l2Gateway, l1Router, inbox, escrow));
+        l1Gateway = address(new L1TokenGateway(l2Gateway, l1Router, inbox));
         ScriptTools.switchOwner(l1Gateway, deployer, owner);
     }
 
