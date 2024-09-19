@@ -26,7 +26,6 @@ interface L1TokenGatewayLike {
     function counterpartGateway() external view returns (address);
     function l1Router() external view returns (address);
     function inbox() external view returns (address);
-    function escrow() external view returns (address);
     function file(bytes32, address) external;
     function registerToken(address, address) external;
 }
