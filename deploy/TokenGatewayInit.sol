@@ -26,8 +26,8 @@ interface L1TokenGatewayLike {
     function counterpartGateway() external view returns (address);
     function l1Router() external view returns (address);
     function inbox() external view returns (address);
-    function escrow() external view returns (address);
-    function registerToken(address l1Token, address l2Token) external;
+    function file(bytes32, address) external;
+    function registerToken(address, address) external;
 }
 
 interface L1RelayLike {
@@ -80,7 +80,6 @@ library TokenGatewayInit {
         require(l1Gateway.counterpartGateway() == l2GatewayInstance.gateway, "TokenGatewayInit/counterpart-gateway-mismatch");
         require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/l1-router-mismatch");
         require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/inbox-mismatch");
-        require(l1Gateway.escrow() == address(escrow), "TokenGatewayInit/incorrect-escrow");
         require(cfg.l1Tokens.length == cfg.l2Tokens.length, "TokenGatewayInit/token-arrays-mismatch");
 
         uint256 l1CallValue = cfg.xchainMsg.maxSubmissionCost + cfg.xchainMsg.maxGas * cfg.xchainMsg.gasPriceBid;
@@ -88,6 +87,8 @@ library TokenGatewayInit {
         // not strictly necessary (as the retryable ticket creation would otherwise fail) 
         // but makes the eth balance requirement more explicit
         require(address(l1GovRelay).balance >= l1CallValue, "TokenGatewayInit/insufficient-relay-balance");
+
+        l1Gateway.file("escrow", address(escrow));
 
         for (uint256 i; i < cfg.l1Tokens.length; ++i) {
             (address l1Token, address l2Token) = (cfg.l1Tokens[i], cfg.l2Tokens[i]);

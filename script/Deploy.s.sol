@@ -122,7 +122,7 @@ contract Deploy is Script {
 
         l1Domain.selectFork();
         vm.startBroadcast(l1PrivKey);
-        address l1Gateway = TokenGatewayDeploy.deployL1Gateway(l1Deployer, owner, l2Gateway, l1Router, inbox, escrow);
+        address l1Gateway = TokenGatewayDeploy.deployL1Gateway(l1Deployer, owner, l2Gateway, l1Router, inbox);
         vm.stopBroadcast();
         address l2Router = L1RouterLike(l1Router).counterpartGateway();
 

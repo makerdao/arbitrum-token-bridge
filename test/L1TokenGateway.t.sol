@@ -52,7 +52,8 @@ contract L1TokenGatewayTest is DssTest {
 
     function setUp() public {
         inbox = new InboxMock();
-        gateway = new L1TokenGateway(counterpartGateway, l1Router, address(inbox), escrow);
+        gateway = new L1TokenGateway(counterpartGateway, l1Router, address(inbox));
+        gateway.file("escrow", escrow);
         l1Token = new GemMock(1_000_000 ether);
         vm.prank(escrow); l1Token.approve(address(gateway), type(uint256).max);
         gateway.registerToken(address(l1Token), address(0xf00));
@@ -61,13 +62,12 @@ contract L1TokenGatewayTest is DssTest {
     function testConstructor() public {
         vm.expectEmit(true, true, true, true);
         emit Rely(address(this));
-        L1TokenGateway g = new L1TokenGateway(address(111), address(222), address(333), address(444));
+        L1TokenGateway g = new L1TokenGateway(address(111), address(222), address(333));
 
         assertEq(g.isOpen(), 1);
         assertEq(g.counterpartGateway(), address(111));
         assertEq(g.l1Router(), address(222));
         assertEq(g.inbox(), address(333));
-        assertEq(g.escrow(), address(444));
         assertEq(g.wards(address(this)), 1);
     }
 
@@ -82,6 +82,10 @@ contract L1TokenGatewayTest is DssTest {
             gateway.close.selector,
             gateway.registerToken.selector
         ]);
+    }
+
+    function testFileAddress() public {
+        checkFileAddress(address(gateway), "L1TokenGateway", ["escrow"]);
     }
 
     function testErc165() public view {

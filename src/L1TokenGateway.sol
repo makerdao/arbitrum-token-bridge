@@ -33,18 +33,19 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
     mapping(address => uint256) public wards;
     mapping(address => address) public l1ToL2Token;
     uint256 public isOpen = 1;
+    address public escrow;
 
     // --- immutables ---
 
     address public immutable counterpartGateway;
     address public immutable l1Router;
     address public immutable inbox;
-    address public immutable escrow;
 
     // --- events ---
 
     event Rely(address indexed usr);
     event Deny(address indexed usr);
+    event File(bytes32 indexed what, address data);
     event Closed();
     event DepositInitiated(
         address l1Token,
@@ -84,13 +85,11 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
     constructor(
         address _counterpartGateway,
         address _l1Router,
-        address _inbox,
-        address _escrow
+        address _inbox
     ) {
         counterpartGateway = _counterpartGateway;
         l1Router = _l1Router;
         inbox = _inbox;
-        escrow = _escrow;
 
         wards[msg.sender] = 1;
         emit Rely(msg.sender);
@@ -106,6 +105,13 @@ contract L1TokenGateway is ITokenGateway, IL1ArbitrumGateway, ICustomGateway, ER
     function deny(address usr) external auth {
         wards[usr] = 0;
         emit Deny(usr);
+    }
+
+    function file(bytes32 what, address data) external auth {
+        if (what == "escrow") {
+            escrow = data;
+        } else revert("L1TokenGateway/file-unrecognized-param");
+        emit File(what, data);
     }
 
     function close() external auth {
