@@ -17,6 +17,7 @@
 
 pragma solidity ^0.8.21;
 
+import { UUPSUpgradeable, ERC1967Utils } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { ITokenGateway } from "src/arbitrum/ITokenGateway.sol";
 import { ICustomGateway } from "src/arbitrum/ICustomGateway.sol";
 import { AddressAliasHelper } from "src/arbitrum/AddressAliasHelper.sol";
@@ -27,18 +28,19 @@ interface TokenLike {
     function burn(address, uint256) external;
 }
 
-contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
+contract L2TokenGateway is UUPSUpgradeable, ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
     // --- storage variables ---
 
     mapping(address => uint256) public wards;
     mapping(address => address) public l1ToL2Token;
     mapping(address => uint256) public maxWithdraws;
-    uint256 public isOpen = 1;
+    uint256 public isOpen;
 
-    // --- immutables ---
+    // --- immutables and const---
 
     address public immutable l2Router;
     address public immutable counterpartGateway;
+    string public constant version = "1";
 
      // --- events ---
 
@@ -82,11 +84,26 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         address _counterpartGateway,
         address _l2Router
     ) {
+        _disableInitializers(); // Avoid initializing in the context of the implementation
+
         counterpartGateway = _counterpartGateway;
         l2Router = _l2Router;
+    }
 
+    // --- upgradability ---
+
+    function initialize() initializer external {
+        __UUPSUpgradeable_init();
+
+        isOpen = 1;
         wards[msg.sender] = 1;
         emit Rely(msg.sender);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override auth {}
+
+    function getImplementation() external view returns (address) {
+        return ERC1967Utils.getImplementation();
     }
 
     // --- administration ---

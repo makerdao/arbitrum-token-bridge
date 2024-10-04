@@ -9,6 +9,8 @@ The Arbitrum Token Bridge is a [custom Arbitrum bridge](https://docs.arbitrum.io
 - `L1TokenGateway.sol` - L1 side of the bridge. Transfers the deposited tokens into an escrow contract. Transfer them back to the user upon receiving a withdrawal message from the `L2TokenGateway`.
 - `L2TokenGateway.sol` - L2 side of the bridge. Mints new L2 tokens after receiving a deposit message from `L1TokenGateway`. Burns L2 tokens when withdrawing them to L1.
 
+The `L1TokenGateway` and `L2TokenGateway` contracts use the ERC-1822 UUPS pattern for upgradeability and the ERC-1967 proxy storage slots standard. It is important that the `TokenGatewayDeploy` library sequences be used for deploying.
+
 ### External dependencies
 
 - The L2 implementations of the bridged tokens are not provided as part of this repository and are assumed to exist in external repositories. It is assumed that only simple, regular ERC20 tokens will be used with this bridge. In particular, the supported tokens are assumed to revert on failure (instead of returning false) and do not execute any hook on transfer.
@@ -29,7 +31,13 @@ To withdraw her tokens back to L1, Alice calls `outboundTransfer()` on the `L2To
 
 ## Upgrades
 
+### Upgrade the bridge implementation(s)
+
+`L1TokenGateway` and/or `L2TokenGateway` implementations can be upgraded by calling the `upgradeToAndCall` function of their inherited `UUPSUpgradeable` parent. Special care must be taken to ensure any deposit or withdrawal that is in transit at the time of the upgrade will still be able to get confirmed on the destination side.
+
 ### Upgrade to a new bridge (and deprecate this bridge)
+
+As an alternative upgrade mechanism, a new bridge can be deployed to be used with the escrow.
 
 1. Deploy the new token bridge and connect it to the same escrow as the one used by this bridge. The old and new bridges can operate in parallel.
 2. Optionally, deprecate the old bridge by closing it. This involves calling `close()` on both the `L1TokenGateway` and `L2TokenGateway` so that no new outbound message can be sent to the other side of the bridge. After all cross-chain messages are done processing (can take ~1 week), the bridge is effectively closed and governance can consider revoking the approval to transfer funds from the escrow on L1 and the token minting rights on L2.
@@ -44,6 +52,13 @@ To migrate a single token to a new bridge, follow the steps below:
 4. Execute an L2 spell to unregister the token on `L2TokenGateway`, removing the ability to initiate new L2 to L1 transfers for that token.
 
 Note that step 3 is required because unregistering the token on `L2TokenGateway` not only removes the ability to initiate new L2 to L1 transfers but also causes the finalization of pending L1 to L2 transfers to revert. This is a point of difference with the implementation of the Arbitrum generic-custom gateway, where a missing L2 token triggers a withdrawal of the tokens back to L1 instead of a revert.
+
+## Tests
+
+### OZ upgradeability validations
+
+The OZ validations can be run alongside the existing tests:  
+`VALIDATE=true forge test --ffi --build-info --extra-output storageLayout`
 
 ## Deployment
 

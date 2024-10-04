@@ -21,7 +21,7 @@ import "forge-std/Script.sol";
 
 import { ScriptTools } from "dss-test/ScriptTools.sol";
 import { Domain } from "dss-test/domains/Domain.sol";
-import { TokenGatewayDeploy, L2TokenGatewayInstance } from "deploy/TokenGatewayDeploy.sol";
+import { TokenGatewayDeploy, L1TokenGatewayInstance, L2TokenGatewayInstance } from "deploy/TokenGatewayDeploy.sol";
 import { ChainLog } from "deploy/mocks/ChainLog.sol";
 import { L1Escrow } from "deploy/mocks/L1Escrow.sol";
 import { L1GovernanceRelay } from "deploy/mocks/L1GovernanceRelay.sol";
@@ -118,11 +118,11 @@ contract Deploy is Script {
         // L1 deployment
 
         l2Domain.selectFork();
-        address l2Gateway = vm.computeCreateAddress(l2Deployer, vm.getNonce(l2Deployer));
+        address l2Gateway = vm.computeCreateAddress(l2Deployer, vm.getNonce(l2Deployer) + 1);
 
         l1Domain.selectFork();
         vm.startBroadcast(l1PrivKey);
-        address l1Gateway = TokenGatewayDeploy.deployL1Gateway(l1Deployer, owner, l2Gateway, l1Router, inbox);
+        L1TokenGatewayInstance memory l1GatewayInstance = TokenGatewayDeploy.deployL1Gateway(l1Deployer, owner, l2Gateway, l1Router, inbox);
         vm.stopBroadcast();
         address l2Router = L1RouterLike(l1Router).counterpartGateway();
 
@@ -130,7 +130,7 @@ contract Deploy is Script {
 
         l2Domain.selectFork();
         vm.startBroadcast(l2PrivKey);
-        L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway(l2Deployer, l2GovRelay, l1Gateway, l2Router);
+        L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway(l2Deployer, l2GovRelay, l1GatewayInstance.gateway, l2Router);
         require(l2GatewayInstance.gateway == l2Gateway, "l2Gateway address mismatch");
         vm.stopBroadcast();
 
@@ -144,8 +144,10 @@ contract Deploy is Script {
         ScriptTools.exportContract("deployed", "escrow", escrow);
         ScriptTools.exportContract("deployed", "l1GovRelay", l1GovRelay);
         ScriptTools.exportContract("deployed", "l2GovRelay", l2GovRelay);
-        ScriptTools.exportContract("deployed", "l1Gateway", l1Gateway);
+        ScriptTools.exportContract("deployed", "l1Gateway", l1GatewayInstance.gateway);
+        ScriptTools.exportContract("deployed", "l1GatewayImp", l1GatewayInstance.gatewayImp);
         ScriptTools.exportContract("deployed", "l2Gateway", l2Gateway);
+        ScriptTools.exportContract("deployed", "l2GatewayImp", l2GatewayInstance.gatewayImp);
         ScriptTools.exportContract("deployed", "l2GatewaySpell", l2GatewayInstance.spell);
         ScriptTools.exportContracts("deployed", "l1Tokens", l1Tokens);
         ScriptTools.exportContracts("deployed", "l2Tokens", l2Tokens);

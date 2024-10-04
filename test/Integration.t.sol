@@ -22,15 +22,26 @@ import "dss-test/DssTest.sol";
 import { Domain } from "dss-test/domains/Domain.sol";
 import { ArbitrumDomain } from "dss-test/domains/ArbitrumDomain.sol";
 import { TokenGatewayDeploy } from "deploy/TokenGatewayDeploy.sol";
-import { L2TokenGatewaySpell } from "deploy/L2TokenGatewaySpell.sol";
+import { L1TokenGatewayInstance } from "deploy/L1TokenGatewayInstance.sol";
 import { L2TokenGatewayInstance } from "deploy/L2TokenGatewayInstance.sol";
+import { L2TokenGatewaySpell } from "deploy/L2TokenGatewaySpell.sol";
 import { TokenGatewayInit, GatewaysConfig, MessageParams } from "deploy/TokenGatewayInit.sol";
 import { L1TokenGateway } from "src/L1TokenGateway.sol";
 import { L2TokenGateway } from "src/L2TokenGateway.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
+import { L1TokenGatewayV2Mock } from "test/mocks/L1TokenGatewayV2Mock.sol";
+import { L2TokenGatewayV2Mock } from "test/mocks/L2TokenGatewayV2Mock.sol";
 
 interface L1RelayLike {
     function l2GovernanceRelay() external view returns (address);
+    function relay(
+        address target,
+        bytes calldata targetData,
+        uint256 l1CallValue,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 maxSubmissionCost
+    ) external payable;
 }
 
 interface L1RouterLike {
@@ -55,6 +66,7 @@ contract IntegrationTest is DssTest {
     DssInstance dss;
     address PAUSE_PROXY;
     address ESCROW;
+    address L1_GOV_RELAY;
     GemMock l1Token;
     L1TokenGateway l1Gateway;
     address INBOX;
@@ -64,6 +76,7 @@ contract IntegrationTest is DssTest {
     address L2_GOV_RELAY;
     GemMock l2Token;
     L2TokenGateway l2Gateway;
+    address l2Spell;
     address L2_ROUTER;
 
     function setUp() public {
@@ -76,9 +89,11 @@ contract IntegrationTest is DssTest {
         dss = l1Domain.dss();
         PAUSE_PROXY  = dss.chainlog.getAddress("MCD_PAUSE_PROXY");
         ESCROW       = dss.chainlog.getAddress("ARBITRUM_ESCROW");
-        L2_GOV_RELAY = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY")).l2GovernanceRelay();
+        L1_GOV_RELAY = dss.chainlog.getAddress("ARBITRUM_GOV_RELAY");
+        L2_GOV_RELAY = L1RelayLike(L1_GOV_RELAY).l2GovernanceRelay();
         vm.label(address(PAUSE_PROXY),  "PAUSE_PROXY");
         vm.label(address(ESCROW),       "ESCROW");
+        vm.label(address(L1_GOV_RELAY), "L1_GOV_RELAY");
         vm.label(address(L2_GOV_RELAY), "L2_GOV_RELAY");
 
         l2Domain = new ArbitrumDomain(config, getChain("arbitrum_one"), l1Domain);
@@ -89,7 +104,7 @@ contract IntegrationTest is DssTest {
         L2_ROUTER = L1RouterLike(L1_ROUTER).counterpartGateway();
         vm.label(L2_ROUTER, "L2_ROUTER");
 
-        address l1Gateway_ = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 2); // foundry increments a global nonce across domains
+        address l1Gateway_ = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 4); // foundry increments a global nonce across domains
         l2Domain.selectFork();
         L2TokenGatewayInstance memory l2GatewayInstance = TokenGatewayDeploy.deployL2Gateway({
             deployer:  address(this),
@@ -98,17 +113,23 @@ contract IntegrationTest is DssTest {
             l2Router:  L2_ROUTER
         });
         l2Gateway = L2TokenGateway(l2GatewayInstance.gateway);
-        assertEq(address(L2TokenGatewaySpell(l2GatewayInstance.spell).l2Gateway()), address(l2Gateway));
+        l2Spell = l2GatewayInstance.spell;
+        assertEq(address(L2TokenGatewaySpell(l2Spell).l2Gateway()), address(l2Gateway));
+        assertEq(l2Gateway.version(), "1");
+        assertEq(l2Gateway.getImplementation(), l2GatewayInstance.gatewayImp);
 
         l1Domain.selectFork();
-        l1Gateway = L1TokenGateway(TokenGatewayDeploy.deployL1Gateway({
+        L1TokenGatewayInstance memory l1GatewayInstance = TokenGatewayDeploy.deployL1Gateway({
             deployer:  address(this),
             owner:     PAUSE_PROXY,
             l2Gateway: address(l2Gateway), 
             l1Router:  L1_ROUTER,
             inbox:     INBOX
-        }));
+        });
+        l1Gateway = L1TokenGateway(l1GatewayInstance.gateway);
         assertEq(address(l1Gateway), l1Gateway_);
+        assertEq(l1Gateway.version(), "1");
+        assertEq(l1Gateway.getImplementation(), l1GatewayInstance.gatewayImp);
 
         l1Token = new GemMock(100 ether);
         vm.label(address(l1Token), "l1Token");
@@ -141,13 +162,14 @@ contract IntegrationTest is DssTest {
 
         l1Domain.selectFork();
         vm.startPrank(PAUSE_PROXY);
-        TokenGatewayInit.initGateways(dss, address(l1Gateway), l2GatewayInstance, cfg);
+        TokenGatewayInit.initGateways(dss, l1GatewayInstance, l2GatewayInstance, cfg);
         vm.stopPrank();
 
         // test L1 side of initGateways
         assertEq(l1Token.allowance(ESCROW, l1Gateway_), type(uint256).max);
         assertEq(l1Gateway.l1ToL2Token(address(l1Token)), address(l2Token));
         assertEq(dss.chainlog.getAddress("ARBITRUM_TOKEN_BRIDGE"), address(l1Gateway));
+        assertEq(dss.chainlog.getAddress("ARBITRUM_TOKEN_BRIDGE_IMP"), l1GatewayInstance.gatewayImp);
 
         l2Domain.relayFromHost(true);
 
@@ -250,5 +272,40 @@ contract IntegrationTest is DssTest {
 
     function testWithdrawViaRouter() public {
         _withdraw(L2_ROUTER);
+    }
+
+    function testUpgrade() public {
+        l2Domain.selectFork();
+        address newL2Imp = address(new L2TokenGatewayV2Mock());
+        l1Domain.selectFork();
+        address newL1Imp = address(new L1TokenGatewayV2Mock());
+
+        vm.startPrank(PAUSE_PROXY);
+        l1Gateway.upgradeToAndCall(newL1Imp, abi.encodeCall(L1TokenGatewayV2Mock.reinitialize, ()));
+        vm.stopPrank();
+
+        assertEq(l1Gateway.getImplementation(), newL1Imp);
+        assertEq(l1Gateway.version(), "2");
+        assertEq(l1Gateway.wards(PAUSE_PROXY), 1); // still a ward
+
+        vm.startPrank(PAUSE_PROXY);
+        L1RelayLike(L1_GOV_RELAY).relay({
+            target:     l2Spell,
+            targetData: abi.encodeCall(L2TokenGatewaySpell.upgradeToAndCall, (
+                newL2Imp,
+                abi.encodeCall(L2TokenGatewayV2Mock.reinitialize, ())
+            )),
+            l1CallValue:       0.01 ether + 300_000 * 0.1 gwei,
+            gasPriceBid:       0.1 gwei,
+            maxGas:            300_000,
+            maxSubmissionCost: 0.01 ether
+        });
+        vm.stopPrank();
+
+        l2Domain.relayFromHost(true);
+
+        assertEq(l2Gateway.getImplementation(), newL2Imp);
+        assertEq(l2Gateway.version(), "2");
+        assertEq(l2Gateway.wards(L2_GOV_RELAY), 1); // still a ward
     }
 }

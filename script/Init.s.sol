@@ -23,6 +23,7 @@ import { ScriptTools } from "dss-test/ScriptTools.sol";
 import { Domain } from "dss-test/domains/Domain.sol";
 import { MCD, DssInstance } from "dss-test/MCD.sol";
 import { TokenGatewayInit, GatewaysConfig, MessageParams } from "deploy/TokenGatewayInit.sol";
+import { L1TokenGatewayInstance } from "deploy/L1TokenGatewayInstance.sol";
 import { L2TokenGatewayInstance } from "deploy/L2TokenGatewayInstance.sol";
 import { L2TokenGatewaySpell } from "deploy/L2TokenGatewaySpell.sol";
 import { L2GovernanceRelay } from "deploy/mocks/L2GovernanceRelay.sol";
@@ -64,6 +65,7 @@ contract Init is Script {
             deps.readAddress(".l2GatewaySpell"), 
             abi.encodeCall(L2TokenGatewaySpell.init, (
                 deps.readAddress(".l2Gateway"),
+                deps.readAddress(".l2GatewayImp"),
                 l1Gateway,
                 deps.readAddress(".l2Router"),
                 cfg.l1Tokens,
@@ -77,9 +79,14 @@ contract Init is Script {
             maxSubmissionCost: retryable.getSubmissionFee(initCalldata) * 250 / 100
         });
 
+        L1TokenGatewayInstance memory l1GatewayInstance = L1TokenGatewayInstance({
+            gateway:    deps.readAddress(".l1Gateway"),
+            gatewayImp: deps.readAddress(".l1GatewayImp")
+        });
         L2TokenGatewayInstance memory l2GatewayInstance = L2TokenGatewayInstance({
-            spell:   deps.readAddress(".l2GatewaySpell"),
-            gateway: deps.readAddress(".l2Gateway")
+            spell:      deps.readAddress(".l2GatewaySpell"),
+            gateway:    deps.readAddress(".l2Gateway"),
+            gatewayImp: deps.readAddress(".l2GatewayImp")
         });
 
         vm.startBroadcast(l1PrivKey);
@@ -89,7 +96,7 @@ contract Init is Script {
             require(success, "l1GovRelay topup failed");
         }
 
-        TokenGatewayInit.initGateways(dss, l1Gateway, l2GatewayInstance, cfg);
+        TokenGatewayInit.initGateways(dss, l1GatewayInstance, l2GatewayInstance, cfg);
         vm.stopBroadcast();
     }
 }

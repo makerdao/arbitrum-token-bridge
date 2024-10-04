@@ -18,6 +18,8 @@ pragma solidity >=0.8.0;
 
 import { ScriptTools } from "dss-test/ScriptTools.sol";
 
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { L1TokenGatewayInstance } from "./L1TokenGatewayInstance.sol";
 import { L2TokenGatewayInstance } from "./L2TokenGatewayInstance.sol";
 import { L2TokenGatewaySpell } from "./L2TokenGatewaySpell.sol";
 import { L1TokenGateway } from "src/L1TokenGateway.sol";
@@ -30,9 +32,10 @@ library TokenGatewayDeploy {
         address l2Gateway,
         address l1Router,
         address inbox
-    ) internal returns (address l1Gateway) {
-        l1Gateway = address(new L1TokenGateway(l2Gateway, l1Router, inbox));
-        ScriptTools.switchOwner(l1Gateway, deployer, owner);
+    ) internal returns (L1TokenGatewayInstance memory l1GatewayInstance) {
+        l1GatewayInstance.gatewayImp = address(new L1TokenGateway(l2Gateway, l1Router, inbox));
+        l1GatewayInstance.gateway = address(new ERC1967Proxy(l1GatewayInstance.gatewayImp, abi.encodeCall(L1TokenGateway.initialize, ())));
+        ScriptTools.switchOwner(l1GatewayInstance.gateway, deployer, owner);
     }
 
     function deployL2Gateway(
@@ -41,7 +44,8 @@ library TokenGatewayDeploy {
         address l1Gateway,
         address l2Router
     ) internal returns (L2TokenGatewayInstance memory l2GatewayInstance) {
-        l2GatewayInstance.gateway = address(new L2TokenGateway(l1Gateway, l2Router));
+        l2GatewayInstance.gatewayImp = address(new L2TokenGateway(l1Gateway, l2Router));
+        l2GatewayInstance.gateway = address(new ERC1967Proxy(l2GatewayInstance.gatewayImp, abi.encodeCall(L2TokenGateway.initialize, ())));
         l2GatewayInstance.spell = address(new L2TokenGatewaySpell(l2GatewayInstance.gateway));
         ScriptTools.switchOwner(l2GatewayInstance.gateway, deployer, owner);
     }

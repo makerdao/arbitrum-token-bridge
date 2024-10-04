@@ -20,6 +20,9 @@ interface L2TokenGatewayLike {
     function isOpen() external view returns (uint256);
     function counterpartGateway() external view returns (address);
     function l2Router() external view returns (address);
+    function version() external view returns (string memory);
+    function getImplementation() external view returns (address);
+    function upgradeToAndCall(address, bytes memory) external;
     function rely(address) external;
     function deny(address) external;
     function close() external;
@@ -39,6 +42,7 @@ contract L2TokenGatewaySpell {
         l2Gateway = L2TokenGatewayLike(l2Gateway_);
     }
 
+    function upgradeToAndCall(address newImp, bytes memory data) external { l2Gateway.upgradeToAndCall(newImp, data); }
     function rely(address usr) external { l2Gateway.rely(usr); }
     function deny(address usr) external { l2Gateway.deny(usr); }
     function close() external { l2Gateway.close(); }
@@ -60,6 +64,7 @@ contract L2TokenGatewaySpell {
     
     function init(
         address l2Gateway_,
+        address l2GatewayImp,
         address counterpartGateway,
         address l2Router,
         address[] calldata l1Tokens,
@@ -68,6 +73,8 @@ contract L2TokenGatewaySpell {
     ) external {
         // sanity checks
         require(address(l2Gateway) == l2Gateway_, "L2TokenGatewaySpell/l2-gateway-mismatch");
+        require(keccak256(bytes(l2Gateway.version())) == keccak256("1"), "L2TokenGatewaySpell/version-does-not-match");
+        require(l2Gateway.getImplementation() == l2GatewayImp, "L2TokenGatewaySpell/imp-does-not-match");
         require(l2Gateway.isOpen() == 1, "L2TokenGatewaySpell/not-open");
         require(l2Gateway.counterpartGateway() == counterpartGateway, "L2TokenGatewaySpell/counterpart-gateway-mismatch");
         require(l2Gateway.l2Router() == l2Router, "L2TokenGatewaySpell/l2-router-mismatch");

@@ -18,11 +18,14 @@
 pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
-
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { L2TokenGateway } from "src/L2TokenGateway.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
 import { ArbSysMock } from "test/mocks/ArbSysMock.sol";
 import { AddressAliasHelper } from "src/arbitrum/AddressAliasHelper.sol";
+import { L2TokenGatewayV2Mock } from "test/mocks/L2TokenGatewayV2Mock.sol";
 
 contract L2TokenGatewayTest is DssTest {
 
@@ -44,6 +47,7 @@ contract L2TokenGatewayTest is DssTest {
         uint256 _amount
     );
     event TxToL1(address indexed _from, address indexed _to, uint256 indexed _id, bytes _data);
+    event UpgradedTo(string version);
 
     address ARB_SYS_ADDRESS = address(100);
     address l1Token = address(0xf00);
@@ -51,26 +55,30 @@ contract L2TokenGatewayTest is DssTest {
     L2TokenGateway gateway;
     address counterpartGateway = address(0xccc);
     address l2Router = address(0xbbb);
+    bool validate;
 
     function setUp() public {
-        gateway = new L2TokenGateway(counterpartGateway, l2Router);
+        validate = vm.envOr("VALIDATE", false);
+
+        L2TokenGateway imp = new L2TokenGateway(counterpartGateway, l2Router);
+        assertEq(imp.counterpartGateway(), counterpartGateway);
+        assertEq(imp.l2Router(), l2Router);
+
+        vm.expectEmit(true, true, true, true);
+        emit Rely(address(this));
+        gateway = L2TokenGateway(address(new ERC1967Proxy(address(imp), abi.encodeCall(L2TokenGateway.initialize, ()))));
+        assertEq(gateway.getImplementation(), address(imp));
+        assertEq(gateway.wards(address(this)), 1);
+        assertEq(gateway.isOpen(), 1);
+        assertEq(gateway.counterpartGateway(), counterpartGateway);
+        assertEq(gateway.l2Router(), l2Router);
+
         l2Token = new GemMock(1_000_000 ether);
         l2Token.rely(address(gateway));
         l2Token.deny(address(this));
         gateway.registerToken(l1Token, address(l2Token));
         gateway.setMaxWithdraw(address(l2Token), 1_000_000 ether);
         vm.etch(ARB_SYS_ADDRESS, address(new ArbSysMock()).code);
-    }
-
-    function testConstructor() public {
-        vm.expectEmit(true, true, true, true);
-        emit Rely(address(this));
-        L2TokenGateway g = new L2TokenGateway(address(111), address(222));
-
-        assertEq(g.isOpen(), 1);
-        assertEq(g.counterpartGateway(), address(111));
-        assertEq(g.l2Router(), address(222));
-        assertEq(g.wards(address(this)), 1);
     }
 
     function testAuth() public {
@@ -83,7 +91,8 @@ contract L2TokenGatewayTest is DssTest {
         checkModifier(address(gateway), string(abi.encodePacked("L2TokenGateway", "/not-authorized")), [
             gateway.close.selector,
             gateway.registerToken.selector,
-            gateway.setMaxWithdraw.selector
+            gateway.setMaxWithdraw.selector,
+            gateway.upgradeToAndCall.selector
         ]);
     }
 
@@ -189,6 +198,74 @@ contract L2TokenGatewayTest is DssTest {
         
         assertEq(l2Token.balanceOf(address(0xced)), balanceBefore + 100 ether);
         assertEq(l2Token.totalSupply(), supplyBefore + 100 ether);
+    }
+
+    function testDeployWithUpgradesLib() public {
+        Options memory opts;
+        if (!validate) {
+            opts.unsafeSkipAllChecks = true;
+        } else {
+            opts.unsafeAllow = 'state-variable-immutable,constructor';
+        }
+        opts.constructorData = abi.encode(counterpartGateway, l2Router);
+
+        vm.expectEmit(true, true, true, true);
+        emit Rely(address(this));
+        address proxy = Upgrades.deployUUPSProxy(
+            "out/L2TokenGateway.sol/L2TokenGateway.json",
+            abi.encodeCall(L2TokenGateway.initialize, ()),
+            opts
+        );
+        assertEq(L2TokenGateway(proxy).version(), "1");
+        assertEq(L2TokenGateway(proxy).wards(address(this)), 1);
+    }
+
+    function testUpgrade() public {
+        address newImpl = address(new L2TokenGatewayV2Mock());
+        vm.expectEmit(true, true, true, true);
+        emit UpgradedTo("2");
+        gateway.upgradeToAndCall(newImpl, abi.encodeCall(L2TokenGatewayV2Mock.reinitialize, ()));
+
+        assertEq(gateway.getImplementation(), newImpl);
+        assertEq(gateway.version(), "2");
+        assertEq(gateway.wards(address(this)), 1); // still a ward
+    }
+
+    function testUpgradeWithUpgradesLib() public {
+        address implementation1 = gateway.getImplementation();
+
+        Options memory opts;
+        if (!validate) {
+            opts.unsafeSkipAllChecks = true;
+        } else {
+            opts.referenceContract = "out/L2TokenGateway.sol/L2TokenGateway.json";
+            opts.unsafeAllow = 'constructor';
+        }
+
+        vm.expectEmit(true, true, true, true);
+        emit UpgradedTo("2");
+        Upgrades.upgradeProxy(
+            address(gateway),
+            "out/L2TokenGatewayV2Mock.sol/L2TokenGatewayV2Mock.json",
+            abi.encodeCall(L2TokenGatewayV2Mock.reinitialize, ()),
+            opts
+        );
+
+        address implementation2 = gateway.getImplementation();
+        assertTrue(implementation1 != implementation2);
+        assertEq(gateway.version(), "2");
+        assertEq(gateway.wards(address(this)), 1); // still a ward
+    }
+
+    function testInitializeAgain() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        gateway.initialize();
+    }
+
+    function testInitializeDirectly() public {
+        address implementation = gateway.getImplementation();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        L2TokenGateway(implementation).initialize();
     }
 
 }
