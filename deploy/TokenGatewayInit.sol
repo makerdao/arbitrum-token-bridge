@@ -60,6 +60,7 @@ struct GatewaysConfig {
     address inbox;
     address[] l1Tokens;
     address[] l2Tokens;
+    uint256[] maxWithdraws;
     MessageParams xchainMsg;
 }
 
@@ -81,6 +82,7 @@ library TokenGatewayInit {
         require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/l1-router-mismatch");
         require(l1Gateway.inbox() == cfg.inbox, "TokenGatewayInit/inbox-mismatch");
         require(cfg.l1Tokens.length == cfg.l2Tokens.length, "TokenGatewayInit/token-arrays-mismatch");
+        require(cfg.maxWithdraws.length == cfg.l2Tokens.length, "TokenGatewayInit/max-withdraws-length-mismatch");
 
         uint256 l1CallValue = cfg.xchainMsg.maxSubmissionCost + cfg.xchainMsg.maxGas * cfg.xchainMsg.gasPriceBid;
 
@@ -94,6 +96,7 @@ library TokenGatewayInit {
             (address l1Token, address l2Token) = (cfg.l1Tokens[i], cfg.l2Tokens[i]);
             require(l1Token != address(0), "TokenGatewayInit/invalid-l1-token");
             require(l2Token != address(0), "TokenGatewayInit/invalid-l2-token");
+            require(cfg.maxWithdraws[i] > 0, "TokenGatewayInit/max-withdraw-not-set");
             require(l1Gateway.l1ToL2Token(l1Token) == address(0), "TokenGatewayInit/existing-l1-token");
 
             l1Gateway.registerToken(l1Token, l2Token);
@@ -107,7 +110,8 @@ library TokenGatewayInit {
                 l1Gateway_,
                 l1Router.counterpartGateway(),
                 cfg.l1Tokens,
-                cfg.l2Tokens
+                cfg.l2Tokens,
+                cfg.maxWithdraws
             )),
             l1CallValue:       l1CallValue,
             maxGas:            cfg.xchainMsg.maxGas,

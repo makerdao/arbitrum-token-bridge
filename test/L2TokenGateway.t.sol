@@ -27,6 +27,7 @@ import { AddressAliasHelper } from "src/arbitrum/AddressAliasHelper.sol";
 contract L2TokenGatewayTest is DssTest {
 
     event TokenSet(address indexed l1Address, address indexed l2Address);
+    event MaxWithdrawSet(address indexed l2Token, uint256 maxWithdraw);
     event Closed();
         event DepositFinalized(
         address indexed l1Token,
@@ -57,6 +58,7 @@ contract L2TokenGatewayTest is DssTest {
         l2Token.rely(address(gateway));
         l2Token.deny(address(this));
         gateway.registerToken(l1Token, address(l2Token));
+        gateway.setMaxWithdraw(address(l2Token), 1_000_000 ether);
         vm.etch(ARB_SYS_ADDRESS, address(new ArbSysMock()).code);
     }
 
@@ -80,7 +82,8 @@ contract L2TokenGatewayTest is DssTest {
 
         checkModifier(address(gateway), string(abi.encodePacked("L2TokenGateway", "/not-authorized")), [
             gateway.close.selector,
-            gateway.registerToken.selector
+            gateway.registerToken.selector,
+            gateway.setMaxWithdraw.selector
         ]);
     }
 
@@ -94,6 +97,16 @@ contract L2TokenGatewayTest is DssTest {
 
         assertEq(gateway.l1ToL2Token(address(11)), address(22));
         assertEq(gateway.calculateL2TokenAddress(address(11)), address(22));
+    }
+
+    function testSetmaxWithdraw() public {
+        assertEq(gateway.maxWithdraws(address(22)), 0);
+
+        vm.expectEmit(true, true, true, true);
+        emit MaxWithdrawSet(address(22), 123);
+        gateway.setMaxWithdraw(address(22), 123);
+
+        assertEq(gateway.maxWithdraws(address(22)), 123);
     }
 
     function testClose() public {
@@ -123,6 +136,9 @@ contract L2TokenGatewayTest is DssTest {
 
         vm.expectRevert("L2TokenGateway/invalid-token");
         gateway.outboundTransfer(address(0xbad), address(0xb0b), 100 ether, 0, 0, "");
+
+        vm.expectRevert("L2TokenGateway/amount-too-large");
+        gateway.outboundTransfer(l1Token, address(0xb0b), 1_000_000 ether + 1, 0, 0, "");
         
         vm.expectRevert("L2TokenGateway/extra-data-not-allowed");
         gateway.outboundTransfer(l1Token, address(0xb0b), 100 ether, 0, 0, "bad");

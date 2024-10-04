@@ -123,17 +123,20 @@ contract IntegrationTest is DssTest {
         l1Tokens[0] = address(l1Token);
         address[] memory l2Tokens = new address[](1);
         l2Tokens[0] = address(l2Token);
+        uint256[] memory maxWithdraws = new uint256[](1);
+        maxWithdraws[0] = 10_000_000 ether;
         MessageParams memory xchainMsg = MessageParams({
             gasPriceBid:       0.1 gwei,
             maxGas:            300_000,
             maxSubmissionCost: 0.01 ether
         });
         GatewaysConfig memory cfg = GatewaysConfig({
-            l1Router:           L1_ROUTER,
-            inbox:              INBOX,
-            l1Tokens:           l1Tokens,
-            l2Tokens:           l2Tokens,
-            xchainMsg:          xchainMsg
+            l1Router:     L1_ROUTER,
+            inbox:        INBOX,
+            l1Tokens:     l1Tokens,
+            l2Tokens:     l2Tokens,
+            maxWithdraws: maxWithdraws,
+            xchainMsg:    xchainMsg
         });
 
         l1Domain.selectFork();
@@ -150,6 +153,7 @@ contract IntegrationTest is DssTest {
 
         // test L2 side of initGateways
         assertEq(l2Gateway.l1ToL2Token(address(l1Token)), address(l2Token));
+        assertEq(l2Gateway.maxWithdraws(address(l2Token)), 10_000_000 ether);
         assertEq(l2Token.wards(address(l2Gateway)), 1);
 
         // Register L1 & L2 gateways in L1 & L2 routers

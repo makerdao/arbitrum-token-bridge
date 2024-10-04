@@ -32,6 +32,7 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
 
     mapping(address => uint256) public wards;
     mapping(address => address) public l1ToL2Token;
+    mapping(address => uint256) public maxWithdraws;
     uint256 public isOpen = 1;
 
     // --- immutables ---
@@ -44,6 +45,7 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
     event Rely(address indexed usr);
     event Deny(address indexed usr);
     event Closed();
+    event MaxWithdrawSet(address indexed l2Token, uint256 maxWithdraw);
     event DepositFinalized(
         address indexed l1Token,
         address indexed _from,
@@ -109,6 +111,11 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         emit TokenSet(l1Token, l2Token);
     }
 
+    function setMaxWithdraw(address l2Token, uint256 maxWithdraw) external auth {
+        maxWithdraws[l2Token] = maxWithdraw;
+        emit MaxWithdrawSet(l2Token, maxWithdraw);
+    }
+
     // --- outbound transfers ---
 
     function outboundTransfer(
@@ -139,6 +146,7 @@ contract L2TokenGateway is ITokenGateway, ICustomGateway, L2ArbitrumMessenger {
         require(isOpen == 1, "L2TokenGateway/closed");
         address l2Token = l1ToL2Token[l1Token];
         require(l2Token != address(0), "L2TokenGateway/invalid-token");
+        require(amount <= maxWithdraws[l2Token], "L2TokenGateway/amount-too-large");
         address from;
         bytes memory extraData = data;
         (from, extraData) = msg.sender == l2Router ? abi.decode(extraData, (address, bytes)) : (msg.sender, extraData);
