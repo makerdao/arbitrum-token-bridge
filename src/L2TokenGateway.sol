@@ -40,7 +40,7 @@ contract L2TokenGateway is UUPSUpgradeable, ITokenGateway, ICustomGateway, L2Arb
 
     address public immutable l2Router;
     address public immutable counterpartGateway;
-    string public constant version = "1";
+    string  public constant  version = "1";
 
      // --- events ---
 

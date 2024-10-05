@@ -41,7 +41,7 @@ contract L1TokenGateway is UUPSUpgradeable, ITokenGateway, IL1ArbitrumGateway, I
     address public immutable counterpartGateway;
     address public immutable l1Router;
     address public immutable inbox;
-    string public constant version = "1";
+    string  public constant  version = "1";
 
     // --- events ---
 
