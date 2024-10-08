@@ -18,6 +18,7 @@ pragma solidity >=0.8.0;
 
 import { DssInstance } from "dss-test/MCD.sol";
 import { L2TokenGatewayInstance } from "./L2TokenGatewayInstance.sol";
+import { L1TokenGatewayInstance } from "./L1TokenGatewayInstance.sol";
 import { L2TokenGatewaySpell } from "./L2TokenGatewaySpell.sol";
 
 interface L1TokenGatewayLike {
@@ -26,6 +27,8 @@ interface L1TokenGatewayLike {
     function counterpartGateway() external view returns (address);
     function l1Router() external view returns (address);
     function inbox() external view returns (address);
+    function version() external view returns (string memory);
+    function getImplementation() external view returns (address);
     function file(bytes32, address) external;
     function registerToken(address, address) external;
 }
@@ -67,16 +70,18 @@ struct GatewaysConfig {
 library TokenGatewayInit {
     function initGateways(
         DssInstance memory            dss,
-        address                       l1Gateway_,
+        L1TokenGatewayInstance memory l1GatewayInstance,
         L2TokenGatewayInstance memory l2GatewayInstance,
         GatewaysConfig memory         cfg
     ) internal {
-        L1TokenGatewayLike l1Gateway = L1TokenGatewayLike(l1Gateway_);
+        L1TokenGatewayLike l1Gateway = L1TokenGatewayLike(l1GatewayInstance.gateway);
         L1RelayLike       l1GovRelay = L1RelayLike(dss.chainlog.getAddress("ARBITRUM_GOV_RELAY"));
         EscrowLike            escrow = EscrowLike(dss.chainlog.getAddress("ARBITRUM_ESCROW"));
         L1RouterLike        l1Router = L1RouterLike(cfg.l1Router);
 
         // sanity checks
+        require(keccak256(bytes(l1Gateway.version())) == keccak256("1"), "TokenGatewayInit/version-does-not-match");
+        require(l1Gateway.getImplementation() == l1GatewayInstance.gatewayImp, "TokenGatewayInit/imp-does-not-match");
         require(l1Gateway.isOpen() == 1, "TokenGatewayInit/not-open");
         require(l1Gateway.counterpartGateway() == l2GatewayInstance.gateway, "TokenGatewayInit/counterpart-gateway-mismatch");
         require(l1Gateway.l1Router() == cfg.l1Router, "TokenGatewayInit/l1-router-mismatch");
@@ -100,14 +105,15 @@ library TokenGatewayInit {
             require(l1Gateway.l1ToL2Token(l1Token) == address(0), "TokenGatewayInit/existing-l1-token");
 
             l1Gateway.registerToken(l1Token, l2Token);
-            escrow.approve(l1Token, l1Gateway_, type(uint256).max);
+            escrow.approve(l1Token, l1GatewayInstance.gateway, type(uint256).max);
         }
 
         l1GovRelay.relay({
             target:            l2GatewayInstance.spell,
             targetData:        abi.encodeCall(L2TokenGatewaySpell.init, (
                 l2GatewayInstance.gateway,
-                l1Gateway_,
+                l2GatewayInstance.gatewayImp,
+                l1GatewayInstance.gateway,
                 l1Router.counterpartGateway(),
                 cfg.l1Tokens,
                 cfg.l2Tokens,
@@ -119,6 +125,7 @@ library TokenGatewayInit {
             maxSubmissionCost: cfg.xchainMsg.maxSubmissionCost
         });
 
-        dss.chainlog.setAddress("ARBITRUM_TOKEN_BRIDGE", l1Gateway_);
+        dss.chainlog.setAddress("ARBITRUM_TOKEN_BRIDGE",     l1GatewayInstance.gateway);
+        dss.chainlog.setAddress("ARBITRUM_TOKEN_BRIDGE_IMP", l1GatewayInstance.gatewayImp);
     }
 }

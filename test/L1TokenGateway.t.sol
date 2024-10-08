@@ -18,10 +18,13 @@
 pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
-
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { L1TokenGateway } from "src/L1TokenGateway.sol";
 import { InboxMock, BridgeMock, OutboxMock } from "test/mocks/InboxMock.sol";
 import { GemMock } from "test/mocks/GemMock.sol";
+import { L1TokenGatewayV2Mock } from "test/mocks/L1TokenGatewayV2Mock.sol";
 
 contract L1TokenGatewayTest is DssTest {
 
@@ -42,6 +45,7 @@ contract L1TokenGatewayTest is DssTest {
         uint256 _amount
     );
     event TxToL2(address indexed _from, address indexed _to, uint256 indexed _seqNum, bytes _data);
+    event UpgradedTo(string version);
 
     GemMock l1Token;
     L1TokenGateway gateway;
@@ -49,26 +53,32 @@ contract L1TokenGatewayTest is DssTest {
     address counterpartGateway = address(0xccc);
     address l1Router = address(0xbbb);
     InboxMock inbox;
+    bool validate;
 
     function setUp() public {
+        validate = vm.envOr("VALIDATE", false);
+
         inbox = new InboxMock();
-        gateway = new L1TokenGateway(counterpartGateway, l1Router, address(inbox));
+
+        L1TokenGateway imp = new L1TokenGateway(counterpartGateway, l1Router, address(inbox));
+        assertEq(imp.counterpartGateway(), counterpartGateway);
+        assertEq(imp.l1Router(), l1Router);
+        assertEq(imp.inbox(), address(inbox));
+
+        vm.expectEmit(true, true, true, true);
+        emit Rely(address(this));
+        gateway = L1TokenGateway(address(new ERC1967Proxy(address(imp), abi.encodeCall(L1TokenGateway.initialize, ()))));
+        assertEq(gateway.getImplementation(), address(imp));
+        assertEq(gateway.wards(address(this)), 1);
+        assertEq(gateway.isOpen(), 1);
+        assertEq(gateway.counterpartGateway(), counterpartGateway);
+        assertEq(gateway.l1Router(), l1Router);
+        assertEq(gateway.inbox(), address(inbox));
+
         gateway.file("escrow", escrow);
         l1Token = new GemMock(1_000_000 ether);
         vm.prank(escrow); l1Token.approve(address(gateway), type(uint256).max);
         gateway.registerToken(address(l1Token), address(0xf00));
-    }
-
-    function testConstructor() public {
-        vm.expectEmit(true, true, true, true);
-        emit Rely(address(this));
-        L1TokenGateway g = new L1TokenGateway(address(111), address(222), address(333));
-
-        assertEq(g.isOpen(), 1);
-        assertEq(g.counterpartGateway(), address(111));
-        assertEq(g.l1Router(), address(222));
-        assertEq(g.inbox(), address(333));
-        assertEq(g.wards(address(this)), 1);
     }
 
     function testAuth() public {
@@ -80,7 +90,8 @@ contract L1TokenGatewayTest is DssTest {
 
         checkModifier(address(gateway), string(abi.encodePacked("L1TokenGateway", "/not-authorized")), [
             gateway.close.selector,
-            gateway.registerToken.selector
+            gateway.registerToken.selector,
+            gateway.upgradeToAndCall.selector
         ]);
     }
 
@@ -185,5 +196,73 @@ contract L1TokenGatewayTest is DssTest {
 
         assertEq(l1Token.balanceOf(escrow), 0);
         assertEq(l1Token.balanceOf(address(0xced)), 100 ether);
+    }
+
+    function testDeployWithUpgradesLib() public {
+        Options memory opts;
+        if (!validate) {
+            opts.unsafeSkipAllChecks = true;
+        } else {
+            opts.unsafeAllow = 'state-variable-immutable,constructor';
+        }
+        opts.constructorData = abi.encode(counterpartGateway, l1Router, address(inbox));
+
+        vm.expectEmit(true, true, true, true);
+        emit Rely(address(this));
+        address proxy = Upgrades.deployUUPSProxy(
+            "out/L1TokenGateway.sol/L1TokenGateway.json",
+            abi.encodeCall(L1TokenGateway.initialize, ()),
+            opts
+        );
+        assertEq(L1TokenGateway(proxy).version(), "1");
+        assertEq(L1TokenGateway(proxy).wards(address(this)), 1);
+    }
+
+    function testUpgrade() public {
+        address newImpl = address(new L1TokenGatewayV2Mock());
+        vm.expectEmit(true, true, true, true);
+        emit UpgradedTo("2");
+        gateway.upgradeToAndCall(newImpl, abi.encodeCall(L1TokenGatewayV2Mock.reinitialize, ()));
+
+        assertEq(gateway.getImplementation(), newImpl);
+        assertEq(gateway.version(), "2");
+        assertEq(gateway.wards(address(this)), 1); // still a ward
+    }
+
+    function testUpgradeWithUpgradesLib() public {
+        address implementation1 = gateway.getImplementation();
+
+        Options memory opts;
+        if (!validate) {
+            opts.unsafeSkipAllChecks = true;
+        } else {
+            opts.referenceContract = "out/L1TokenGateway.sol/L1TokenGateway.json";
+            opts.unsafeAllow = 'constructor';
+        }
+
+        vm.expectEmit(true, true, true, true);
+        emit UpgradedTo("2");
+        Upgrades.upgradeProxy(
+            address(gateway),
+            "out/L1TokenGatewayV2Mock.sol/L1TokenGatewayV2Mock.json",
+            abi.encodeCall(L1TokenGatewayV2Mock.reinitialize, ()),
+            opts
+        );
+
+        address implementation2 = gateway.getImplementation();
+        assertTrue(implementation1 != implementation2);
+        assertEq(gateway.version(), "2");
+        assertEq(gateway.wards(address(this)), 1); // still a ward
+    }
+
+    function testInitializeAgain() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        gateway.initialize();
+    }
+
+    function testInitializeDirectly() public {
+        address implementation = gateway.getImplementation();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        L1TokenGateway(implementation).initialize();
     }
 }

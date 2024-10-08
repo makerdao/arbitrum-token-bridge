@@ -16,8 +16,7 @@
 
 pragma solidity >=0.8.0;
 
-struct L2TokenGatewayInstance {
+struct L1TokenGatewayInstance {
     address gateway;
     address gatewayImp;
-    address spell;
 }
