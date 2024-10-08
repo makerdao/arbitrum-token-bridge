@@ -55,6 +55,10 @@ contract Init is Script {
         cfg.inbox = deps.readAddress(".inbox");
         cfg.l1Tokens = deps.readAddressArray(".l1Tokens");
         cfg.l2Tokens = deps.readAddressArray(".l2Tokens");
+        cfg.maxWithdraws = new uint256[](cfg.l2Tokens.length);
+        for (uint256 i; i < cfg.maxWithdraws.length; ++i) {
+            cfg.maxWithdraws[i] = 10_000_000 ether;
+        }
 
         bytes memory initCalldata = abi.encodeCall(L2GovernanceRelay.relay, (
             deps.readAddress(".l2GatewaySpell"), 
@@ -63,7 +67,8 @@ contract Init is Script {
                 l1Gateway,
                 deps.readAddress(".l2Router"),
                 cfg.l1Tokens,
-                cfg.l2Tokens
+                cfg.l2Tokens,
+                cfg.maxWithdraws
             ))
         ));
         cfg.xchainMsg = MessageParams({

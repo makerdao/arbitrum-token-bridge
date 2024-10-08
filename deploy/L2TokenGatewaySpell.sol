@@ -24,6 +24,7 @@ interface L2TokenGatewayLike {
     function deny(address) external;
     function close() external;
     function registerToken(address, address) external;
+    function setMaxWithdraw(address, uint256) external;
 }
 
 interface AuthLike {
@@ -49,13 +50,21 @@ contract L2TokenGatewaySpell {
             unchecked { ++i; }
         }
     }
+
+    function setMaxWithdraws(address[] memory l2Tokens, uint256[] memory maxWithdraws) public { 
+        for (uint256 i; i < l2Tokens.length;) {
+            l2Gateway.setMaxWithdraw(l2Tokens[i], maxWithdraws[i]);
+            unchecked { ++i; }
+        }
+    }
     
     function init(
         address l2Gateway_,
         address counterpartGateway,
         address l2Router,
         address[] calldata l1Tokens,
-        address[] calldata l2Tokens
+        address[] calldata l2Tokens,
+        uint256[] calldata maxWithdraws
     ) external {
         // sanity checks
         require(address(l2Gateway) == l2Gateway_, "L2TokenGatewaySpell/l2-gateway-mismatch");
@@ -64,5 +73,6 @@ contract L2TokenGatewaySpell {
         require(l2Gateway.l2Router() == l2Router, "L2TokenGatewaySpell/l2-router-mismatch");
 
         registerTokens(l1Tokens, l2Tokens);
+        setMaxWithdraws(l2Tokens, maxWithdraws);
     }
 }
