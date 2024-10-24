@@ -20,9 +20,21 @@ contract BridgeMock {
 
 contract InboxMock {
     address public immutable bridge;
+    address public lastTo;
+    uint256 public lastL2CallValue;
+    uint256 public lastMaxSubmissionCost;
+    address public lastRefundTo;
+    address public lastUser;
+    uint256 public lastMaxGas;
+    uint256 public lastGasPriceBid;
+    bytes32 public lastDataHash;
+    uint256 public lastValue;
+    uint256 public ret;
+
     constructor() {
         bridge = address(new BridgeMock());
     }
+
     function createRetryableTicket(
         address _to,
         uint256 _l2CallValue,
@@ -32,5 +44,17 @@ contract InboxMock {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) payable external returns (uint256) {}
+    ) payable external returns (uint256) {
+        lastTo = _to;
+        lastL2CallValue = _l2CallValue;
+        lastMaxSubmissionCost = _maxSubmissionCost;
+        lastRefundTo = _refundTo;
+        lastUser = _user;
+        lastMaxGas = _maxGas;
+        lastGasPriceBid = _gasPriceBid;
+        lastDataHash = keccak256(_data);
+        lastValue = msg.value;
+
+        return ret;
+    }
 }
