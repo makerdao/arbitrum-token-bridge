@@ -1,0 +1,14 @@
+{
+  "domains": {
+    "mainnet": {
+      "chainlog": "0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F",
+      "tokens": []
+    },
+    "arbitrum_one": {
+      "inbox": "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
+      "l1Router": "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef",
+      "arbSys": "0x0000000000000000000000000000000000000064",
+      "tokens": []
+    }
+  }
+}
